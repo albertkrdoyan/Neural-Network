@@ -185,12 +185,12 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
     iterations_count = levels * parts_count
 
-    # print("Length of all data set : {}".format(data_set_len))
-    # print("Length of train set : {}".format(train_set_len))
-    # print("Length of test set : {}".format(test_set_len))
-    # print("Batch count: {}, length of a batch: {}".format(parts_count, batch_len))
-    # print("Training levels count: {}".format(levels))
-    # print("All iterations count: {}\n".format(iterations_count))
+    print("Length of all data set : {}".format(data_set_len))
+    print("Length of train set : {}".format(train_set_len))
+    print("Length of test set : {}".format(test_set_len))
+    print("Batch count: {}, length of a batch: {}".format(parts_count, batch_len))
+    print("Training levels count: {}".format(levels))
+    print("All iterations count: {}\n".format(iterations_count))
 
     lvls = 0
     btchs = 0
@@ -209,6 +209,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     data = (weights, inputs, outputs, loss, optimizer, netInfo)
 
     for it_part in it_set:
+        print("L : {}/{}, b {}/{}".format(lvls + 1, levels, btchs + 1, parts_count))
         lvl_btch = (lvls, btchs, parts_count)
         hyper_parameters = (b1, b2, eps, alp, t)
         data_tj = (train_set, test_set, it_part, t, matrices, hyper_parameters, parts, lvl_btch)
@@ -216,7 +217,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         tme = time.time()
         lvls, btchs, t = train_jit(data_tj, data)
         tme2 = time.time() - tme
-        print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
+        #print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
 
 
 #@njit

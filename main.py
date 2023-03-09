@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     nn.print_len = 10
 
-    nn.train(inputS, outputS, 0.1, 5, 32)
+    nn.train(inputS, outputS, 0.1, 10, 32)
 
 
     # nn.a_loop(np.array([0.3, 0.5], dtype='float64'), np.array([1, 0], dtype='float64'))

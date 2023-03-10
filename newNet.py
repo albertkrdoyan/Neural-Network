@@ -58,7 +58,7 @@ def forward(input_ : np.ndarray):
     forward_propagation(input_, data_fp, True)
     return outputs[-1]
 
-@njit(debug=True)
+#@njit(debug=True)
 def forward_propagation(input_ : np.ndarray, data: tuple, normal = False):
     netInfo_, inputs_, outputs_, weights_ = data
 
@@ -90,7 +90,7 @@ def forward_propagation_for_perceptron(activation : Activation, data : tuple):
         for i in range(len(outputs_)):
             outputs_[i] = np.tanh(-outputs_[i])
 
-@njit(debug=True)
+#@njit(debug=True)
 def back_propagation(output_ : np.ndarray, data : tuple):
     netInfo_, inputs_, outputs_, weights_, gradients_, loss_ = data
 
@@ -160,8 +160,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     test_set_len += train_set_len % batch_len
     train_set_len -= train_set_len % batch_len
 
-    train_set = [inputS[0 : train_set_len], outputS[0 : train_set_len]] # ուսուցանվող տվյալներ
-    test_set = [inputS[train_set_len : data_set_len], outputS[train_set_len : data_set_len]] # թեսթային տվյալների
+    train_set_index_list = [i for i in range(train_set_len)]
+    test_set_index_list = [i for i in range(train_set_len, data_set_len)]
 
     gradient, momentum1, momentum2 = [], [], []
     for block in weights:
@@ -192,7 +192,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     lvls = 0
     btchs = 0
 
-    it_set = []
+    it_set : list
     if print_len == 0 or print_len > iterations_count:
         it_set = [[0, iterations_count]]
     else:
@@ -205,13 +205,18 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     parts = np.array(parts)
 
     for it_part in it_set:
-        ts = (train_set, test_set) # problem
+        ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
         whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, b1, b2, eps, alp,
                       ts, it_part, gradient, momentum1, momentum2, parts)
 
         tme = time.time()
         train_jit(whole_data)
+        # առաջնային խնդիր::::: forward և backward prop-ների մեջ խնդիր կա
+        # հաջորդիվ՝ ստուգել յուրաքանչյուր օբյեկտի փոփոխելիությունտ,
+        # տեղեկություն :: : : : արդեն դատասետ տերմինի փոխարեն
+        # փոխանցվում է օրգինալ դատասետը՝ ինդեքսային հաջորդականության հետ միասին, այսինքն պետք է շաֆլ անել ինդեքսների
+        # հաջորդականությունը
         btchs, lvls, t = hps[0], hps[1], hps[2]
         tme2 = time.time() - tme
         print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))

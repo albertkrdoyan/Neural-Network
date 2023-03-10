@@ -53,14 +53,14 @@ def add_layer(net_type : NetType, activation : Activation, input_len : int, outp
         pass
 
 # neural section
-def forward(input_ : np.ndarray):
-    data_fp = (netInfo, inputs, outputs, weights)
-    forward_propagation(input_, data_fp, True)
+def forward(input_: np.ndarray) -> object:
+    data_fp = (input_, netInfo, inputs, outputs, weights, True)
+    forward_propagation(data_fp)
     return outputs[-1]
 
 @njit(debug=True)
-def forward_propagation(input_ : np.ndarray, data: tuple, normal = False):
-    netInfo_, inputs_, outputs_, weights_ = data
+def forward_propagation(data: tuple):
+    input_, netInfo_, inputs_, outputs_, weights_, normal = data
 
     for index, info in enumerate(netInfo_):
         if info[0] == NetType.Perceptron:
@@ -91,8 +91,8 @@ def forward_propagation_for_perceptron(data : tuple):
             outputs_[i] = np.tanh(-outputs_[i])
 
 @njit(debug=True)
-def back_propagation(output_ : np.ndarray, data : tuple):
-    netInfo_, inputs_, outputs_, weights_, gradients_, loss_ = data
+def back_propagation(data : tuple):
+    output_, netInfo_, inputs_, outputs_, weights_, gradients_, loss_ = data
 
     last_neuron_layer = outputs_[-1]
 
@@ -149,14 +149,14 @@ def back_propagation_for_perceptron(data : tuple):
     jit_equal1d(inputs_, derivative)
 
 def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, levels : int, batch_len : int):
-    data_set_len = len(inputS) # ստանում ենք ամբողջ տվյալների երկարությունը
+    data_set_len = len(inputS)
     if batch_len > data_set_len or batch_len == 0:
-        batch_len = data_set_len # հաստատում ենք բատչի երկարությունը
+        batch_len = data_set_len
 
-    percent = 0.2 * 100 / batch_len # որոշում է թեսթային տվյալների տոկոսային երկարությունը
+    percent = 0.2 * 100 / batch_len
 
-    train_set_len = data_set_len - int(data_set_len * percent / 100) # ուսուցանվող տվյալների երկարությունը
-    test_set_len = data_set_len - train_set_len # թեսթային տվյալների երկարությունը
+    train_set_len = data_set_len - int(data_set_len * percent / 100)
+    test_set_len = data_set_len - train_set_len
     test_set_len += train_set_len % batch_len
     train_set_len -= train_set_len % batch_len
 
@@ -165,14 +165,13 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
     gradient, momentum1, momentum2 = [], [], []
     for block in weights:
-        gradient.append(np.zeros(block.shape, dtype='f8')) # ստեղծում է գռադիենտի մատրիցը
+        gradient.append(np.zeros(block.shape, dtype='f8'))
         if optimizer == Optimizer.Adam:
             momentum1.append(np.zeros(block.shape, dtype='f8'))
-            momentum2.append(np.zeros(block.shape, dtype='f8')) # ստեղծում է 2 իմպուլսային մատրիցաներ, եթե ADAM
-                                                                # օպտիմիզացիա է
+            momentum2.append(np.zeros(block.shape, dtype='f8'))
 
     b1, b2, eps, = 0.9, 0.999, 1e-7
-    alp, t = float(learning_rate), 0 # ստեղծում է հիպերպարամետրերը=
+    alp, t = float(learning_rate), 0
 
     parts_count = train_set_len // batch_len
     parts = [[i * batch_len, (i + 1) * batch_len - 1] for i in range(parts_count)]
@@ -212,10 +211,6 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
         tme = time.time()
         train_jit(whole_data)
-        # հաջորդիվ՝ ստուգել յուրաքանչյուր օբյեկտի փոփոխելիությունը train_jit-ի մեջ
-        # տեղեկություն :: :: :: :: արդեն դատասետ տերմինի փոխարեն
-        # փոխանցվում է օրգինալ դատասետը՝ ինդեքսային հաջորդականության հետ միասին, այսինքն պետք է շաֆլ անել ինդեքսների
-        # հաջորդականությունը
         btchs, lvls, t = hps[0], hps[1], hps[2]
         tme2 = time.time() - tme
         print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
@@ -237,15 +232,15 @@ def train_jit(data : tuple):
     #         hps[1] += 1
     pass
 
-def a_loop(input_, output_):
-    data_fp = (netInfo, inputs, outputs, weights)
-    forward_propagation(input_, data_fp)
+def a_loop(input_ : np.ndarray, output_ : np.ndarray):
+    data_fp = (input_, netInfo, inputs, outputs, weights, False)
+    forward_propagation(data_fp)
 
     gradients = []
     for block in weights:
         gradients.append(np.zeros(block.shape, dtype='float64'))
-    data_bp = (netInfo, inputs, outputs, weights, gradients, loss)
-    back_propagation(output_, data_bp)
+    data_bp = (output_, netInfo, inputs, outputs, weights, gradients, loss)
+    back_propagation(data_bp)
 
     for i, block in enumerate(gradients):
         print("Gradient [{}]:".format(i))

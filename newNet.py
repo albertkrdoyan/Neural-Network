@@ -170,12 +170,9 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
             momentum1.append(np.zeros(block.shape, dtype='f8'))
             momentum2.append(np.zeros(block.shape, dtype='f8')) # ստեղծում է 2 իմպուլսային մատրիցաներ, եթե ADAM
                                                                 # օպտիմիզացիա է
-    matrices = (gradient, momentum1, momentum2)
 
     b1, b2, eps, = 0.9, 0.999, 1e-7
-    alp, t = float(learning_rate), 0 # ստեղծում է հիպերպարամետրերը
-
-    hyper_parameters = (b1, b2, eps, alp, t)
+    alp, t = float(learning_rate), 0 # ստեղծում է հիպերպարամետրերը=
 
     parts_count = train_set_len // batch_len
     parts = [[i * batch_len, (i + 1) * batch_len - 1] for i in range(parts_count)]
@@ -195,10 +192,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     lvls = 0
     btchs = 0
 
-    lvl_btch = (lvls, btchs, parts_count)
-
     it_set = []
-    if print_len == 0:
+    if print_len == 0 or print_len > iterations_count:
         it_set = [[0, iterations_count]]
     else:
         it_1_count = iterations_count // print_len
@@ -206,40 +201,37 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         if iterations_count % print_len != 0:
             it_set.append([print_len*it_1_count, iterations_count])
 
-    data = (weights, inputs, outputs, loss, optimizer, netInfo)
+    hps = np.array([btchs, lvls, t])
+    parts = np.array(parts)
 
     for it_part in it_set:
-        print("L : {}/{}, b {}/{}".format(lvls + 1, levels, btchs + 1, parts_count))
-        lvl_btch = (lvls, btchs, parts_count)
-        hyper_parameters = (b1, b2, eps, alp, t)
-        data_tj = (train_set, test_set, it_part, t, matrices, hyper_parameters, parts, lvl_btch)
+        ts = (train_set, test_set) # problem
+        # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
+        whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, b1, b2, eps, alp,
+                      ts, it_part, gradient, momentum1, momentum2, parts)
 
         tme = time.time()
-        lvls, btchs, t = train_jit(data_tj, data)
+        train_jit(whole_data)
+        btchs, lvls, t = hps[0], hps[1], hps[2]
         tme2 = time.time() - tme
-        #print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
+        print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
 
 
-#@njit
-def train_jit(data1 : tuple, data2 : tuple):
-    train_set, test_set, it_part, t, matrices, hyper_parameters, parts, lvl_btch = data1
-    weights_, inputs_, outputs_, loss_, optimizer_, netInfo_ = data2
-
-    gradient, momentum1, momentum2 = matrices
-    b1, b2, eps, alp, t = hyper_parameters
-    lvls, btchs, parts_count = lvl_btch
-
-    for ip in range(it_part[0], it_part[1]):
-        for p in range(parts[btchs][0], parts[btchs][1]):
-            pass
-
-        t += 1
-        btchs += 1
-        if t % parts_count == 0:
-            btchs = 0
-            lvls += 1
-
-    return lvls, btchs, t
+@njit
+def train_jit(data : tuple):
+    pass
+    # weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, b1, b2, eps, alp,\
+    # train_set, test_set, it_part, matrices, hyper_parameters, parts, lvl_btch = data
+    #
+    # for ip in range(it_part[0], it_part[1]):
+    #     for p in range(parts[hps[0]][0], parts[hps[0]][1]):
+    #         pass
+    #
+    #     hps[2] += 1
+    #     hps[0] += 1
+    #     if hps[2] % parts_count == 0:
+    #         hps[0] = 0
+    #         hps[1] += 1
 
 def a_loop(input_, output_):
     data_fp = (netInfo, inputs, outputs, weights)

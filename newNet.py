@@ -216,7 +216,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         tme = time.time()
         lvls, btchs, t = train_jit(data_tj, data)
         tme2 = time.time() - tme
-        print("Level: {}/{}, Batch: {}/{}, iteration time: {}".format(lvls, levels, btchs, parts_count, tme2))
+        print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
 
 
 #@njit

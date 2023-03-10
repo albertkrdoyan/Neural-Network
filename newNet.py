@@ -255,7 +255,7 @@ def a_loop(input_, output_):
 
 # additional functions
 def argmax(arr_: np.ndarray):
-    result_ = [0 for _ in range(len(arr_))]
+    result_ = [0. for _ in range(len(arr_))]
     max_ = arr_[0]
     max_index = 0
 

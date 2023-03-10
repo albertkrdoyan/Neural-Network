@@ -231,7 +231,7 @@ def train_jit(data1 : tuple, data2 : tuple):
     for ip in range(it_part[0], it_part[1]):
         for p in range(parts[btchs][0], parts[btchs][1]):
             pass
-        pass
+
         t += 1
         btchs += 1
         if t % parts_count == 0:

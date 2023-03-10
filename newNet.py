@@ -49,8 +49,8 @@ def add_layer(net_type : NetType, activation : Activation, input_len : int, outp
         weights.append(np.random.random((input_len + 1, output_len)))
         perceptron_counter += 1
     else:
-        pass
         #Dropout, ect...
+        pass
 
 # neural section
 def forward(input_ : np.ndarray):
@@ -58,23 +58,23 @@ def forward(input_ : np.ndarray):
     forward_propagation(input_, data_fp, True)
     return outputs[-1]
 
-#@njit(debug=True)
+@njit(debug=True)
 def forward_propagation(input_ : np.ndarray, data: tuple, normal = False):
     netInfo_, inputs_, outputs_, weights_ = data
 
     for index, info in enumerate(netInfo_):
         if info[0] == NetType.Perceptron:
             jit_equal1d(inputs_[index], input_)
-            data_pfp = (outputs_[index], inputs_[index], weights_[index])
-            forward_propagation_for_perceptron(info[1], data_pfp)
+            data_pfp = (info[1], outputs_[index], inputs_[index], weights_[index])
+            forward_propagation_for_perceptron(data_pfp)
             input_ = outputs_[index]
         elif normal is False:
-            pass
             #Dropout, CNN ect.
+            pass
 
 @njit
-def forward_propagation_for_perceptron(activation : Activation, data : tuple):
-    outputs_, inputs_, weights_ = data
+def forward_propagation_for_perceptron(data : tuple):
+    activation, outputs_, inputs_, weights_ = data
     mx.neuralMultiplicationMega(outputs_, inputs_, weights_)
 
     if activation == Activation.ReLU:
@@ -90,7 +90,7 @@ def forward_propagation_for_perceptron(activation : Activation, data : tuple):
         for i in range(len(outputs_)):
             outputs_[i] = np.tanh(-outputs_[i])
 
-#@njit(debug=True)
+@njit(debug=True)
 def back_propagation(output_ : np.ndarray, data : tuple):
     netInfo_, inputs_, outputs_, weights_, gradients_, loss_ = data
 
@@ -113,16 +113,16 @@ def back_propagation(output_ : np.ndarray, data : tuple):
 
     for info in netInfo__:
         if info[0] is NetType.Perceptron:
-            data_bpfp = (outputs_[info[4]], inputs_[info[4]], weights_[info[4]], gradients_[info[4]])
-            back_propagation_for_perceptron(info[1], output_, data_bpfp)
+            data_bpfp = (info[1], output_, outputs_[info[4]], inputs_[info[4]], weights_[info[4]], gradients_[info[4]])
+            back_propagation_for_perceptron(data_bpfp)
             output_ = inputs_[info[4]]
         else:
-            pass
             #DropOut
+            pass
 
 @njit
-def back_propagation_for_perceptron(activation : Activation, output_ : np.ndarray, data : tuple):
-    outputs_, inputs_, weights_, gradient_ = data
+def back_propagation_for_perceptron(data : tuple):
+    activation, output_, outputs_, inputs_, weights_, gradient_ = data
 
     if activation == Activation.ReLU:
         for i in range(len(outputs_)):
@@ -212,9 +212,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
         tme = time.time()
         train_jit(whole_data)
-        # առաջնային խնդիր::::: forward և backward prop-ների մեջ խնդիր կա
-        # հաջորդիվ՝ ստուգել յուրաքանչյուր օբյեկտի փոփոխելիությունտ,
-        # տեղեկություն :: : : : արդեն դատասետ տերմինի փոխարեն
+        # հաջորդիվ՝ ստուգել յուրաքանչյուր օբյեկտի փոփոխելիությունը train_jit-ի մեջ
+        # տեղեկություն :: :: :: :: արդեն դատասետ տերմինի փոխարեն
         # փոխանցվում է օրգինալ դատասետը՝ ինդեքսային հաջորդականության հետ միասին, այսինքն պետք է շաֆլ անել ինդեքսների
         # հաջորդականությունը
         btchs, lvls, t = hps[0], hps[1], hps[2]
@@ -224,7 +223,6 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
 @njit
 def train_jit(data : tuple):
-    pass
     # weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, b1, b2, eps, alp,\
     # train_set, test_set, it_part, matrices, hyper_parameters, parts, lvl_btch = data
     #
@@ -237,6 +235,7 @@ def train_jit(data : tuple):
     #     if hps[2] % parts_count == 0:
     #         hps[0] = 0
     #         hps[1] += 1
+    pass
 
 def a_loop(input_, output_):
     data_fp = (netInfo, inputs, outputs, weights)

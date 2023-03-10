@@ -13,7 +13,6 @@ if __name__ == '__main__':
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=5, output_len=5)
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=5, output_len=2)
 
-    # nn.forward(np.array([0.5, 0.15], dtype='float64'))
     nn.a_loop(np.array([0.5, 0.15], dtype='float64'), np.array([1, 0], dtype='float64'))
 
     nn.print_neuron_info()

@@ -207,8 +207,22 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     hps = np.array([btchs, lvls, t])
     parts = np.array(parts)
 
+    np.random.shuffle(train_set_index_list)
+    ar1 = np.zeros(shape=inputS.shape, dtype='f8')
+    ar2 = np.zeros(shape=outputS.shape, dtype='f8')
+    for i in range(len(inputS)):
+        ar1[i] = inputS[i]
+        ar2[i] = outputS[i]
+    last_lvl = 0
+
     for it_part in it_set:
-        ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
+        if last_lvl != lvls:
+            last_lvl = lvls
+            for i in range(len(inputS)):
+                ar1[i] = inputS[i]
+                ar2[i] = outputS[i]
+
+        ts = (ar1, ar2, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
         whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, batch_len, b1, b2, eps, alp,
                       ts, it_part, gradient, momentum1, momentum2, parts, error_function)
@@ -301,6 +315,7 @@ def Quadratic_loss(data : tuple):
     for a_i, a_value in enumerate(last_layer_output):
         E += (output[a_i] - a_value) ** 2
     return E
+    
 # additional functions
 def plot_t():
     plt.plot(error_function)

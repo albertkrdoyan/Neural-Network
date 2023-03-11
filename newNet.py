@@ -160,8 +160,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     test_set_len += train_set_len % batch_len
     train_set_len -= train_set_len % batch_len
 
-    train_set_index_list = [i for i in range(train_set_len)]
-    test_set_index_list = [i for i in range(train_set_len, data_set_len)]
+    train_set_index_list = np.array([i for i in range(train_set_len)])
+    test_set_index_list = np.array([i for i in range(train_set_len, data_set_len)])
 
     gradient, momentum1, momentum2 = [], [], []
     for block in weights:
@@ -215,22 +215,30 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         tme2 = time.time() - tme
         print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
 
-
 @njit
 def train_jit(data : tuple):
-    # weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, b1, b2, eps, alp,\
-    # train_set, test_set, it_part, matrices, hyper_parameters, parts, lvl_btch = data
-    #
-    # for ip in range(it_part[0], it_part[1]):
-    #     for p in range(parts[hps[0]][0], parts[hps[0]][1]):
-    #         pass
-    #
-    #     hps[2] += 1
-    #     hps[0] += 1
-    #     if hps[2] % parts_count == 0:
-    #         hps[0] = 0
-    #         hps[1] += 1
-    pass
+    weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, b1, b2, eps, alp, \
+    ts, it_part, gradient, momentum1, momentum2, parts = data
+    inputS, outputS, train_set_index_list, test_set_index_list = ts
+
+    for ip in range(it_part[0], it_part[1]):
+        np.random.shuffle(train_set_index_list)
+
+        for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
+            # almost everything else inside
+            pass
+
+        ## after all
+        for b_i in range(len(gradient)):
+            for l_i in range(len(gradient[b_i])):
+                for g_i in range(len(gradient[b_i][l_i])):
+                    gradient[b_i][l_i][g_i] = 0
+
+        hps[2] += 1
+        hps[0] += 1
+        if hps[2] % parts_count == 0:
+            hps[0] = 0
+            hps[1] += 1
 
 def a_loop(input_ : np.ndarray, output_ : np.ndarray):
     data_fp = (input_, netInfo, inputs, outputs, weights, False)

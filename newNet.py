@@ -55,7 +55,7 @@ def add_layer(net_type : NetType, activation : Activation, input_len : int, outp
         pass
 
 # neural section
-def forward(input_: np.ndarray) -> object:
+def forward(input_: np.ndarray) -> np.ndarray:
     data_fp = (input_, netInfo, inputs, outputs, weights, True)
     forward_propagation(data_fp)
     return outputs[-1]
@@ -285,10 +285,11 @@ def Cross_Entropy(data : tuple):
     output, last_layer_output = data
     E = 0
     for a_i, a_value in enumerate(last_layer_output):
-        if a_value < 0.0000000001:
-            E += output[a_i] * (-25)
-        else:
-            E += output[a_i] * np.log(a_value)
+        # if a_value < 0.0000000001:
+        #     E += output[a_i] * (-25)
+        # else:
+        #
+        E += output[a_i] * np.log(a_value)
     return -E
 
 @njit

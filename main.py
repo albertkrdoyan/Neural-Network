@@ -40,16 +40,40 @@ if __name__ == '__main__':
     outputS = np.array(outputS, dtype='float64')
 
     nn.print_len = 15
-    nn.train(inputS, outputS, 0.00002, 5, 32)
+    nn.train(inputS, outputS, 0.002, 3, 32)
     nn.plot_t()
 
+    t_img = np.load("Digits\\t_img.npy")
+    t_info = np.load("Digits\\t_info.npy")
+    t_img : np.ndarray
+    t_img = t_img / 255
+    t_img.shape = (len(t_img), 28*28)
+
+    bad_answers = []
+    rights = 0
+    for i in range(len(t_img)):
+        data = nn.argmax(nn.forward(t_img[i]))
+
+        if data[t_info[i]] == 1:
+            rights += 1
+        else:
+            bad_answers.append(t_img[i])
+
+    print("Correct: {}%".format(rights / 100))
+
+    bad_answers = np.array(bad_answers)
+    bad_answers.shape = (len(bad_answers), 28, 28)
+    rng = 100 if len(bad_answers) > 100 else len(bad_answers)
+    for i in range(rng):
+        nn.plt.subplot(10, 10, i + 1)
+        nn.plt.xticks([])
+        nn.plt.yticks([])
+        nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
+
+    nn.plt.show()
 
     # nn.a_loop(np.array([0.3, 0.5], dtype='float64'), np.array([1, 0], dtype='float64'))
 
     # nn.print_neuron_info()
     # nn.print_netInfo()
     # nn.print_weights()
-
-    # տեղեկություն :: : : : արդեն դատասետ տերմինի փոխարեն
-    # փոխանցվում է օրգինալ դատասետը՝ ինդեքսային հաջորդականության հետ միասին, այսինքն պետք է շաֆլ անել ինդեքսների
-    # հաջորդականությունը

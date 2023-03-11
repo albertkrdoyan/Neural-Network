@@ -4,6 +4,7 @@ import numpy as np
 import matrix as mx
 from enum import Enum
 from numba import njit
+import matplotlib.pyplot as plt
 
 class NetType(Enum):
     Perceptron = "Perceptron"
@@ -33,6 +34,7 @@ optimizer : Optimizer
 netInfo = []
 perceptron_counter = 0
 
+error_function = []
 print_len = 0
 
 def setup(_optimizer : Optimizer, _loss : Loss):
@@ -160,15 +162,14 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     test_set_len += train_set_len % batch_len
     train_set_len -= train_set_len % batch_len
 
-    train_set_index_list = np.array([i for i in range(train_set_len)])
-    test_set_index_list = np.array([i for i in range(train_set_len, data_set_len)])
+    train_set_index_list = np.array([i for i in range(train_set_len)], dtype='int64')
+    test_set_index_list = np.array([i for i in range(train_set_len, data_set_len)], dtype='int64')
 
     gradient, momentum1, momentum2 = [], [], []
     for block in weights:
         gradient.append(np.zeros(block.shape, dtype='f8'))
-        if optimizer == Optimizer.Adam:
-            momentum1.append(np.zeros(block.shape, dtype='f8'))
-            momentum2.append(np.zeros(block.shape, dtype='f8'))
+        momentum1.append(np.zeros(block.shape, dtype='f8'))
+        momentum2.append(np.zeros(block.shape, dtype='f8'))
 
     b1, b2, eps, = 0.9, 0.999, 1e-7
     alp, t = float(learning_rate), 0
@@ -191,6 +192,9 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     lvls = 0
     btchs = 0
 
+    global error_function
+    error_function = np.zeros((iterations_count, ), dtype='float64')
+
     it_set : list
     if print_len == 0 or print_len > iterations_count:
         it_set = [[0, iterations_count]]
@@ -206,8 +210,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     for it_part in it_set:
         ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
-        whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, b1, b2, eps, alp,
-                      ts, it_part, gradient, momentum1, momentum2, parts)
+        whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, batch_len, b1, b2, eps, alp,
+                      ts, it_part, gradient, momentum1, momentum2, parts, error_function)
 
         tme = time.time()
         train_jit(whole_data)
@@ -217,16 +221,28 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
 @njit
 def train_jit(data : tuple):
-    weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, b1, b2, eps, alp, \
-    ts, it_part, gradient, momentum1, momentum2, parts = data
+    weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, batch_len, b1, b2, eps, alp, \
+    ts, it_part, gradient, momentum1, momentum2, parts, error_function_ = data
     inputS, outputS, train_set_index_list, test_set_index_list = ts
 
     for ip in range(it_part[0], it_part[1]):
         np.random.shuffle(train_set_index_list)
-
+        train_err = 0
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
             # almost everything else inside
-            pass
+            data_fp = (inputS[train_set_index_list[p]], netInfo_, inputs_, outputs_, weights_, False)
+            forward_propagation(data_fp)
+            train_err += Loss_Calculator((outputS[train_set_index_list[p]], outputs_[-1], loss_))
+            data_bp = (outputS[train_set_index_list[p]], netInfo_, inputs_, outputs_, weights_, gradient, loss_)
+            back_propagation(data_bp)
+
+        error_function_[hps[2]] = train_err / batch_len
+
+        for i in range(len(weights_)):
+            mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
+            if optimizer_ == Optimizer.Gradient_descent:
+                mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
+                mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
 
         ## after all
         for b_i in range(len(gradient)):
@@ -256,7 +272,39 @@ def a_loop(input_ : np.ndarray, output_ : np.ndarray):
 
     print()
 
+@njit
+def Loss_Calculator(data : tuple):
+    output_data, last_layer_output, loss_ = data
+    if loss_ == Loss.Categorical_cross_entropy:
+        return Cross_Entropy((output_data, last_layer_output))
+    elif loss_ == Loss.Quadratic_loss:
+        return Quadratic_loss((output_data, last_layer_output))
+
+@njit
+def Cross_Entropy(data : tuple):
+    output, last_layer_output = data
+    E = 0
+    for a_i, a_value in enumerate(last_layer_output):
+        if a_value < 0.0000000001:
+            E += output[a_i] * (-25)
+        else:
+            E += output[a_i] * np.log(a_value)
+    return -E
+
+@njit
+def Quadratic_loss(data : tuple):
+    output, last_layer_output = data
+    E = 0
+    for a_i, a_value in enumerate(last_layer_output):
+        E += (output[a_i] - a_value) ** 2
+    return E
 # additional functions
+def plot_t():
+    plt.plot(error_function)
+    plt.ylabel('Cost')
+    plt.xlabel('Times')
+    plt.show()
+
 def argmax(arr_: np.ndarray):
     result_ = [0. for _ in range(len(arr_))]
     max_ = arr_[0]

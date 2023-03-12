@@ -1,4 +1,4 @@
-import time
+import time, math
 
 import numpy as np
 import matrix as mx
@@ -193,7 +193,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     btchs = 0
 
     global error_function
-    error_function = np.zeros((iterations_count, ), dtype='float64')
+    error_function = np.zeros((int(iterations_count / 2) + 1, ), dtype='float64')
 
     it_set : list
     if print_len == 0 or print_len > iterations_count:
@@ -202,7 +202,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         it_1_count = iterations_count // print_len
         it_set = [[i*it_1_count, (i + 1)*it_1_count] for i in range(print_len)]
         if iterations_count % print_len != 0:
-            it_set.append([print_len*it_1_count, iterations_count])
+            it_set[print_len - 1][1] = iterations_count
 
     hps = np.array([btchs, lvls, t])
     parts = np.array(parts)
@@ -224,10 +224,9 @@ def train_jit(data : tuple):
     weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, batch_len, b1, b2, eps, alp, \
     ts, it_part, gradient, momentum1, momentum2, parts, error_function_ = data
     inputS, outputS, train_set_index_list, test_set_index_list = ts
+    train_err = 0
 
     for ip in range(it_part[0], it_part[1]):
-        np.random.shuffle(train_set_index_list)
-        train_err = 0
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
             # almost everything else inside
             data_fp = (inputS[train_set_index_list[p]], netInfo_, inputs_, outputs_, weights_, False)
@@ -235,14 +234,17 @@ def train_jit(data : tuple):
             train_err += Loss_Calculator((outputS[train_set_index_list[p]], outputs_[-1], loss_))
             data_bp = (outputS[train_set_index_list[p]], netInfo_, inputs_, outputs_, weights_, gradient, loss_)
             back_propagation(data_bp)
+            pass
 
-        error_function_[hps[2]] = train_err / batch_len
+        if hps[2] % 2 == 0:
+            error_function_[int(hps[2]/2)] = train_err / (batch_len * 2)
+            train_err = 0
 
-        for i in range(len(weights_)):
+        for i in range(len(gradient)):
             mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
             if optimizer_ == Optimizer.Gradient_descent:
-                mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
-                mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
+                 mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
+                 mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
 
         ## after all
         for b_i in range(len(gradient)):
@@ -253,6 +255,7 @@ def train_jit(data : tuple):
         hps[2] += 1
         hps[0] += 1
         if hps[2] % parts_count == 0:
+            np.random.shuffle(train_set_index_list)
             hps[0] = 0
             hps[1] += 1
 
@@ -285,11 +288,10 @@ def Cross_Entropy(data : tuple):
     output, last_layer_output = data
     E = 0
     for a_i, a_value in enumerate(last_layer_output):
-        # if a_value < 0.0000000001:
-        #     E += output[a_i] * (-25)
-        # else:
-        #
-        E += output[a_i] * np.log(a_value)
+        if a_value < 0.0000000001:
+            E += output[a_i] * (-25)
+        else:
+            E += output[a_i] * np.log(a_value)
     return -E
 
 @njit
@@ -326,7 +328,66 @@ def jit_equal1d(arr1d_1 : np.ndarray, arr1d_2 : np.ndarray):
     for ind, el in enumerate(arr1d_2):
         arr1d_1[ind] = el
 
+@njit
+def cut_trail(f_str):
+    cut = 0
+    for c in f_str[::-1]:
+        if c == "0":
+            cut += 1
+        else:
+            break
+    if cut == 0:
+        for c in f_str[::-1]:
+            if c == "9":
+                cut += 1
+            else:
+                cut -= 1
+                break
+    if cut > 0:
+        f_str = f_str[:-cut]
+    if f_str == "":
+        f_str = "0"
+    return f_str
+
+@njit
+def float2str(value):
+    if math.isnan(value):
+        return "nan"
+    elif value == 0.0:
+        return "0.0"
+    elif value < 0.0:
+        return "-" + float2str(-value)
+    elif math.isinf(value):
+        return "inf"
+    else:
+        max_digits = 16
+        min_digits = -4
+        e10 = math.floor(math.log10(value)) if value != 0.0 else 0
+        if min_digits < e10 < max_digits:
+            i_part = math.floor(value)
+            f_part = math.floor((1 + value % 1) * 10.0 ** max_digits)
+            i_str = str(i_part)
+            f_str = cut_trail(str(f_part)[1:max_digits - e10])
+            return i_str + "." + f_str
+        else:
+            m10 = value / 10.0 ** e10
+            i_part = math.floor(m10)
+            f_part = math.floor((1 + m10 % 1) * 10.0 ** max_digits)
+            i_str = str(i_part)
+            f_str = cut_trail(str(f_part)[1:max_digits])
+            e_str = str(e10)
+            if e10 >= 0:
+                e_str = "+" + e_str
+            return i_str + "." + f_str + "e" + e_str
+
 # print section
+def save():
+    for i in range(len(weights)):
+        np.save(f"weight{i}.npy", weights[i])
+
+def load():
+    for i in range(len(weights)):
+        weights[i] = np.load(f"Digits\\weight{i}.npy")
 def print_neuron_info():
     for i in range(len(inputs)):
         if i == 0:
@@ -347,3 +408,8 @@ def print_weights():
     for i in range(len(weights)):
         print("Weight [{}]".format(i))
         mx.print_matrix(weights[i], '\t')
+
+
+def randomF():
+    for i in range(len(weights)):
+        print(np.sum(weights[i]))

@@ -4,15 +4,13 @@ from newNet import Activation, NetType, Loss, Optimizer
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-
     nn.setup(
         _optimizer=Optimizer.Gradient_descent,
         _loss=Loss.Categorical_cross_entropy
     )
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=28*28, output_len=64)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=64, output_len=64)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=64, output_len=10)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=28*28, output_len=128)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=128, output_len=10)
 
     # nn.a_loop(np.array([0.5, 0.15], dtype='float64'), np.array([1, 0], dtype='float64'))
 
@@ -39,9 +37,16 @@ if __name__ == '__main__':
         outputS.append(arr)
     outputS = np.array(outputS, dtype='float64')
 
+    # print(nn.weights[0].shape)
+    # print(nn.weights[1].shape)
+    nn.load()
+    # print(nn.weights[0].shape)
+    # print(nn.weights[1].shape)
+
     nn.print_len = 15
-    nn.train(inputS, outputS, 0.002, 3, 32)
-    nn.plot_t()
+    nn.train(inputS, outputS, 0.025, 2, 32)
+    # nn.plot_t()
+    nn.save()
 
     t_img = np.load("Digits\\t_img.npy")
     t_info = np.load("Digits\\t_info.npy")
@@ -49,6 +54,7 @@ if __name__ == '__main__':
     t_img = t_img / 255
     t_img.shape = (len(t_img), 28*28)
 
+    print("Calculating...")
     bad_answers = []
     rights = 0
     for i in range(len(t_img)):
@@ -60,20 +66,20 @@ if __name__ == '__main__':
             bad_answers.append(t_img[i])
 
     print("Correct: {}%".format(rights / 100))
+    print("END")
 
-    bad_answers = np.array(bad_answers)
-    bad_answers.shape = (len(bad_answers), 28, 28)
-    rng = 100 if len(bad_answers) > 100 else len(bad_answers)
-    for i in range(rng):
-        nn.plt.subplot(10, 10, i + 1)
-        nn.plt.xticks([])
-        nn.plt.yticks([])
-        nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
+    # bad_answers = np.array(bad_answers)
+    # bad_answers.shape = (len(bad_answers), 28, 28)
+    # rng = 100 if len(bad_answers) > 100 else len(bad_answers)
+    # for i in range(rng):
+    #     nn.plt.subplot(10, 10, i + 1)
+    #     nn.plt.xticks([])
+    #     nn.plt.yticks([])
+    #     nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
+    #
+    # nn.plt.show()
 
-    nn.plt.show()
-
-    # nn.a_loop(np.array([0.3, 0.5], dtype='float64'), np.array([1, 0], dtype='float64'))
-
-    # nn.print_neuron_info()
-    # nn.print_netInfo()
-    # nn.print_weights()
+    # 1 լեվելով թրեյնի ընթացքում ամե ինչ նորմալ է, բայց երբ օգտագործում ենք 2 և ավել լեվելներ 1 թրեյնի մեջ, կամ
+    # 2 և ավել թրեյններ 1 լեվելով խնդիր է առաջանում՝ բացասական քրոս էնտրոպեյաի արժեք, սակայն 1 լեվել 1 թրեյնից
+    # հետո եթե պահենք զանգվածները, անջատենք պրոցեսը ապա պահված զանգվածները փոխանցենք 1 լեվել 1 թրեյնին արդեն
+    # կստացվի նորմալ արդյունք

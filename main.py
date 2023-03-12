@@ -10,8 +10,8 @@ if __name__ == '__main__':
         _loss=Loss.Categorical_cross_entropy
     )
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=2, output_len=7)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=7, output_len=4)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=2, output_len=5)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=5, output_len=4)
 
     _len = 10000
     inputs, outputs = [np.array([], dtype='float64') for _ in range(_len)], [np.array([], dtype='float64') for _ in
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     print("Start training.")
     t = time.time()
-    nn.train(inputs, outputs, 0.003, 1000, 32)
+    nn.train(inputs, outputs, 0.05, 1000, 32)
     print("End of training.")
     print("Duration: {}\n".format(time.time() - t))
 
@@ -52,4 +52,3 @@ if __name__ == '__main__':
     nn.plt.legend()
     nn.plt.show()
 
-    # 2 ներքին շարքի դեպքում չի աշխատում.....

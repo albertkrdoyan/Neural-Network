@@ -208,21 +208,9 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     parts = np.array(parts)
 
     np.random.shuffle(train_set_index_list)
-    ar1 = np.zeros(shape=inputS.shape, dtype='f8')
-    ar2 = np.zeros(shape=outputS.shape, dtype='f8')
-    for i in range(len(inputS)):
-        ar1[i] = inputS[i]
-        ar2[i] = outputS[i]
-    last_lvl = 0
 
     for it_part in it_set:
-        if last_lvl != lvls:
-            last_lvl = lvls
-            for i in range(len(inputS)):
-                ar1[i] = inputS[i]
-                ar2[i] = outputS[i]
-
-        ts = (ar1, ar2, train_set_index_list, test_set_index_list) # problem
+        ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
         whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, batch_len, b1, b2, eps, alp,
                       ts, it_part, gradient, momentum1, momentum2, parts, error_function)
@@ -243,10 +231,12 @@ def train_jit(data : tuple):
     for ip in range(it_part[0], it_part[1]):
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
             # almost everything else inside
-            data_fp = (inputS[train_set_index_list[p]], netInfo_, inputs_, outputs_, weights_, False)
+            predata_i = np.copy(inputS[train_set_index_list[p]])
+            predata_o = np.copy(outputS[train_set_index_list[p]])
+            data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
             forward_propagation(data_fp)
-            train_err += Loss_Calculator((outputS[train_set_index_list[p]], outputs_[-1], loss_))
-            data_bp = (outputS[train_set_index_list[p]], netInfo_, inputs_, outputs_, weights_, gradient, loss_)
+            train_err += Loss_Calculator((predata_o, outputs_[-1], loss_))
+            data_bp = (predata_o, netInfo_, inputs_, outputs_, weights_, gradient, loss_)
             back_propagation(data_bp)
             pass
 
@@ -259,6 +249,9 @@ def train_jit(data : tuple):
             if optimizer_ == Optimizer.Gradient_descent:
                  mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
                  mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
+            elif optimizer_ == Optimizer.Adam:
+                # ADAM here...
+                pass
 
         ## after all
         for b_i in range(len(gradient)):

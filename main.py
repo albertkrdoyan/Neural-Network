@@ -1,84 +1,55 @@
 import numpy as np
 import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
+import time
 
 if __name__ == '__main__':
-    # nn.setup(
-    #     _optimizer=Optimizer.Gradient_descent,
-    #     _loss=Loss.Quadratic_loss
-    # )
-    #
-    # nn.add_layer(net_type=NetType.Perceptron, activation=Activation.Linear, input_len=1, output_len=1)
-    #
-    # inputS, outputS = [], []
-    # for i in range(10):
-    #     inputS.append(np.array([i]))
-    #     outputS.append(np.array([i * 1.8 + 32], dtype='f8'))
-    # inputS, outputS = np.array(inputS, dtype='f8'), np.array(outputS, dtype='f8')
-    #
-    # nn.print_len = 1
-    # nn.train(inputS, outputS, 0.02, 1000, 20)
-    # nn.plot_t()
-    #
-    # nn.print_weights()
-    #
-    # for i in range(30, 80, 3):
-    #     print("For {}, Original: {}, NN: {}".format(i, i * 1.8 + 32, nn.forward(np.array([i], dtype='f8'))))
 
     nn.setup(
         _optimizer=Optimizer.Gradient_descent,
         _loss=Loss.Categorical_cross_entropy
     )
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=784, output_len=64)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=64, output_len=10)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=2, output_len=7)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=7, output_len=4)
 
-    inputS = np.load("Digits\\l_img.npy")
-    l_info = np.load("Digits\\l_info.npy")
-    inputS = inputS / 255
-    inputS: np.ndarray
-    inputS.shape = (len(inputS), 28 * 28,)
+    _len = 10000
+    inputs, outputs = [np.array([], dtype='float64') for _ in range(_len)], [np.array([], dtype='float64') for _ in
+                                                                             range(_len)]
 
-    outputS = []
-    for i in l_info:
-        arr = np.zeros((10, ))
-        arr[i] = 1
-        outputS.append(arr)
-    outputS = np.array(outputS, dtype='float64')
+    for i in range(_len):
+        inputs[i] = np.array([i / _len, 1])
+        if _len / 10 < i < 3 * _len / 10:
+            outputs[i] = np.array([1, 0, 0, 0])
+        elif 4 * _len / 10 < i < 6 * _len / 10:
+            outputs[i] = np.array([0, 1, 0, 0])
+        elif 7 * _len / 10 < i < 9 * _len / 10:
+            outputs[i] = np.array([0, 0, 1, 0])
+        else:
+            outputs[i] = np.array([0, 0, 0, 1])
+    inputs, outputs = np.array(inputs), np.array(outputs, dtype='float64')
 
-    nn.print_len = 15
-    nn.train(inputS, outputS, 0.02, 2, 32)
+    print("Start training.")
+    t = time.time()
+    nn.train(inputs, outputs, 0.003, 1000, 32)
+    print("End of training.")
+    print("Duration: {}\n".format(time.time() - t))
+
     nn.plot_t()
 
-    t_img = np.load("Digits\\t_img.npy")
-    t_info = np.load("Digits\\t_info.npy")
-    t_img: np.ndarray
-    t_img = t_img / 255
-    t_img.shape = (len(t_img), 28 * 28)
+    res_f, c = [[], [], [], []], len(outputs[0])
+    r = 10000
+    for i in range(r):
+        data = nn.forward(np.array([i / r, 1]))
+        for j in range(c):
+            res_f[j].append(data[j])
 
-    print("Calculating...")
-    bad_answers = []
-    rights = 0
-    for i in range(len(t_img)):
-        data = nn.argmax(nn.forward(t_img[i]))
+        if i % (r / 10) == 0:
+            print("Core : {}, nn : {}".format(i / r, nn.argmax(data)))
 
-        if data[t_info[i]] == 1:
-            rights += 1
-        else:
-            bad_answers.append(t_img[i])
-
-    print("Correct: {}%".format(rights / 100))
-    print("END")
-
-    # bad_answers = np.array(bad_answers)
-    # bad_answers.shape = (len(bad_answers), 28, 28)
-    # rng = 100 if len(bad_answers) > 100 else len(bad_answers)
-    # for i in range(rng):
-    #     nn.plt.subplot(10, 10, i + 1)
-    #     nn.plt.xticks([])
-    #     nn.plt.yticks([])
-    #     nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
-    #
-    # nn.plt.show()
+    for j in range(c):
+        nn.plt.plot(res_f[j], label='co{}'.format(j))
+    nn.plt.legend()
+    nn.plt.show()
 
     # 2 ներքին շարքի դեպքում չի աշխատում.....

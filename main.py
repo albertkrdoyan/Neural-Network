@@ -1,34 +1,43 @@
 import numpy as np
 import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
-import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
+    # nn.setup(
+    #     _optimizer=Optimizer.Gradient_descent,
+    #     _loss=Loss.Quadratic_loss
+    # )
+    #
+    # nn.add_layer(net_type=NetType.Perceptron, activation=Activation.Linear, input_len=1, output_len=1)
+    #
+    # inputS, outputS = [], []
+    # for i in range(10):
+    #     inputS.append(np.array([i]))
+    #     outputS.append(np.array([i * 1.8 + 32], dtype='f8'))
+    # inputS, outputS = np.array(inputS, dtype='f8'), np.array(outputS, dtype='f8')
+    #
+    # nn.print_len = 1
+    # nn.train(inputS, outputS, 0.02, 1000, 20)
+    # nn.plot_t()
+    #
+    # nn.print_weights()
+    #
+    # for i in range(30, 80, 3):
+    #     print("For {}, Original: {}, NN: {}".format(i, i * 1.8 + 32, nn.forward(np.array([i], dtype='f8'))))
+
     nn.setup(
         _optimizer=Optimizer.Gradient_descent,
         _loss=Loss.Categorical_cross_entropy
     )
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=28*28, output_len=128)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=128, output_len=10)
-
-    # nn.a_loop(np.array([0.5, 0.15], dtype='float64'), np.array([1, 0], dtype='float64'))
-
-    # nn.print_neuron_info()
-
-    # inputS, outputS = [], []
-    # for i in range(100):
-    #     inputS.append(np.full((5,), i))
-    #     outputS.append(np.full((2, ), i / 60000))
-    #
-    # inputS = np.array(inputS)
-    # outputS = np.array(outputS)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=784, output_len=64)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=64, output_len=10)
 
     inputS = np.load("Digits\\l_img.npy")
     l_info = np.load("Digits\\l_info.npy")
     inputS = inputS / 255
-    inputS : np.ndarray
-    inputS.shape = (len(inputS), 28*28, )
+    inputS: np.ndarray
+    inputS.shape = (len(inputS), 28 * 28,)
 
     outputS = []
     for i in l_info:
@@ -37,25 +46,15 @@ if __name__ == '__main__':
         outputS.append(arr)
     outputS = np.array(outputS, dtype='float64')
 
-    # print(nn.weights[0].shape)
-    # print(nn.weights[1].shape)
-    # nn.load()
-    # print(nn.weights[0].shape)
-    # print(nn.weights[1].shape)
-
-    # inputS = inputS[0 : 6000]
-    # outputS = outputS[0 : 6000]
-
     nn.print_len = 15
-    nn.train(inputS, outputS, 0.025, 3, 32)
+    nn.train(inputS, outputS, 0.02, 2, 32)
     nn.plot_t()
-    nn.save()
 
     t_img = np.load("Digits\\t_img.npy")
     t_info = np.load("Digits\\t_info.npy")
-    t_img : np.ndarray
+    t_img: np.ndarray
     t_img = t_img / 255
-    t_img.shape = (len(t_img), 28*28)
+    t_img.shape = (len(t_img), 28 * 28)
 
     print("Calculating...")
     bad_answers = []
@@ -81,3 +80,5 @@ if __name__ == '__main__':
     #     nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
     #
     # nn.plt.show()
+
+    # 2 ներքին շարքի դեպքում չի աշխատում.....

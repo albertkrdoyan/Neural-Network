@@ -193,7 +193,10 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     btchs = 0
 
     global error_function
-    error_function = np.zeros((int(iterations_count / 2) + 1, ), dtype='float64')
+    if iterations_count % 2 == 1:
+        error_function = np.zeros((int(iterations_count / 2) + 1, ), dtype='float64')
+    else:
+        error_function = np.zeros((int(iterations_count / 2), ), dtype='float64')
 
     it_set : list
     if print_len == 0 or print_len > iterations_count:
@@ -238,7 +241,6 @@ def train_jit(data : tuple):
             train_err += Loss_Calculator((predata_o, outputs_[-1], loss_))
             data_bp = (predata_o, netInfo_, inputs_, outputs_, weights_, gradient, loss_)
             back_propagation(data_bp)
-            pass
 
         if hps[2] % 2 == 0:
             error_function_[int(hps[2]/2)] = train_err / (batch_len * 2)

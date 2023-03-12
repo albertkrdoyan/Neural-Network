@@ -3,82 +3,41 @@ import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
 
 if __name__ == '__main__':
-    # nn.setup(
-    #     _optimizer=Optimizer.Gradient_descent,
-    #     _loss=Loss.Quadratic_loss
-    # )
-    #
-    # nn.add_layer(net_type=NetType.Perceptron, activation=Activation.Linear, input_len=1, output_len=1)
-    #
-    # inputS, outputS = [], []
-    # for i in range(10):
-    #     inputS.append(np.array([i]))
-    #     outputS.append(np.array([i * 1.8 + 32], dtype='f8'))
-    # inputS, outputS = np.array(inputS, dtype='f8'), np.array(outputS, dtype='f8')
-    #
-    # nn.print_len = 1
-    # nn.train(inputS, outputS, 0.02, 1000, 20)
-    # nn.plot_t()
-    #
-    # nn.print_weights()
-    #
-    # for i in range(30, 80, 3):
-    #     print("For {}, Original: {}, NN: {}".format(i, i * 1.8 + 32, nn.forward(np.array([i], dtype='f8'))))
-
     nn.setup(
         _optimizer=Optimizer.Gradient_descent,
         _loss=Loss.Categorical_cross_entropy
     )
+    
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=2, output_len=5)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=5, output_len=2)
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=784, output_len=64)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=64, output_len=10)
+    inputs, outputs = [], []
+    len_ = 10000
+    for i in range(len_):
+        inputs.append(np.array([i/len_, 1], dtype='f8'))
+        if i < 7 * len_/10:
+            outputs.append(np.array([1, 0], dtype='f8'))
+        else:
+            outputs.append(np.array([0, 1], dtype='f8'))
 
-    inputS = np.load("Digits\\l_img.npy")
-    l_info = np.load("Digits\\l_info.npy")
-    inputS = inputS / 255
-    inputS: np.ndarray
-    inputS.shape = (len(inputS), 28 * 28,)
+    inputs, outputs = np.array(inputs), np.array(outputs)
 
-    outputS = []
-    for i in l_info:
-        arr = np.zeros((10, ))
-        arr[i] = 1
-        outputS.append(arr)
-    outputS = np.array(outputS, dtype='float64')
+    nn.print_len = 1
 
-    nn.print_len = 15
-    nn.train(inputS, outputS, 0.02, 2, 32)
+    nn.train(inputs, outputs, 0.003, 300, 32)
     nn.plot_t()
 
-    t_img = np.load("Digits\\t_img.npy")
-    t_info = np.load("Digits\\t_info.npy")
-    t_img: np.ndarray
-    t_img = t_img / 255
-    t_img.shape = (len(t_img), 28 * 28)
+    # exit(0)
 
-    print("Calculating...")
-    bad_answers = []
-    rights = 0
-    for i in range(len(t_img)):
-        data = nn.argmax(nn.forward(t_img[i]))
+    f = [[], []]
 
-        if data[t_info[i]] == 1:
-            rights += 1
-        else:
-            bad_answers.append(t_img[i])
+    for i in range(len_):
+        data = nn.forward(np.array([i/len_, 1], dtype='f8'))
+        for fi in range(len(f)):
+            f[fi].append(data[fi])
 
-    print("Correct: {}%".format(rights / 100))
-    print("END")
-
-    # bad_answers = np.array(bad_answers)
-    # bad_answers.shape = (len(bad_answers), 28, 28)
-    # rng = 100 if len(bad_answers) > 100 else len(bad_answers)
-    # for i in range(rng):
-    #     nn.plt.subplot(10, 10, i + 1)
-    #     nn.plt.xticks([])
-    #     nn.plt.yticks([])
-    #     nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
-    #
-    # nn.plt.show()
-
-    # 2 ներքին շարքի դեպքում չի աշխատում.....
+    for fi in range(len(f)):
+        nn.plt.plot(f[fi])
+    nn.plt.show()
+    # նախորդ խնդրի պատճառը օպտիմիզացիայի ընտրությունն էր, այսինքն պետք է օգտագործել ADAM
+    # լուծել վերևի խնդիրը

@@ -155,12 +155,13 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     if batch_len > data_set_len or batch_len == 0:
         batch_len = data_set_len
 
-    percent = 0.2 * 100 / batch_len
+    percent = 0 * 100 / batch_len
 
     train_set_len = data_set_len - int(data_set_len * percent / 100)
     test_set_len = data_set_len - train_set_len
-    test_set_len += train_set_len % batch_len
-    train_set_len -= train_set_len % batch_len
+    if percent != 0:
+        test_set_len += train_set_len % batch_len
+        train_set_len -= train_set_len % batch_len
 
     train_set_index_list = np.array([i for i in range(train_set_len)], dtype='int64')
     test_set_index_list = np.array([i for i in range(train_set_len, data_set_len)], dtype='int64')
@@ -192,11 +193,12 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     lvls = 0
     btchs = 0
 
+    p_p = 15
     global error_function
-    if iterations_count % 2 == 1:
-        error_function = np.zeros((int(iterations_count / 2) + 1, ), dtype='float64')
+    if iterations_count % p_p != 0:
+        error_function = np.zeros((2, int(iterations_count / p_p) + 1), dtype='float64')
     else:
-        error_function = np.zeros((int(iterations_count / 2), ), dtype='float64')
+        error_function = np.zeros((2, int(iterations_count / p_p)), dtype='float64')
 
     it_set : list
     if print_len == 0 or print_len > iterations_count:
@@ -216,7 +218,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
         whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, batch_len, b1, b2, eps, alp,
-                      ts, it_part, gradient, momentum1, momentum2, parts, error_function)
+                      ts, it_part, gradient, momentum1, momentum2, parts, error_function, p_p)
 
         tme = time.time()
         train_jit(whole_data)
@@ -227,10 +229,10 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 @njit
 def train_jit(data : tuple):
     weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, batch_len, b1, b2, eps, alp, \
-    ts, it_part, gradient, momentum1, momentum2, parts, error_function_ = data
+    ts, it_part, gradient, momentum1, momentum2, parts, error_function_, p_p = data
     inputS, outputS, train_set_index_list, test_set_index_list = ts
-    train_err = 0
-
+    
+    train_err, err_counter = 0, 0
     for ip in range(it_part[0], it_part[1]):
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
             # almost everything else inside
@@ -239,12 +241,13 @@ def train_jit(data : tuple):
             data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
             forward_propagation(data_fp)
             train_err += Loss_Calculator((predata_o, outputs_[-1], loss_))
+            err_counter += 1
             data_bp = (predata_o, netInfo_, inputs_, outputs_, weights_, gradient, loss_)
             back_propagation(data_bp)
 
-        if hps[2] % 2 == 0:
-            error_function_[int(hps[2]/2)] = train_err / (batch_len * 2)
-            train_err = 0
+        if hps[2] % p_p == 0:
+            error_function_[0][int(hps[2]/p_p)] = train_err / err_counter
+            train_err, err_counter = 0, 0
 
         for i in range(len(gradient)):
             mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
@@ -253,13 +256,20 @@ def train_jit(data : tuple):
                  mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
             elif optimizer_ == Optimizer.Adam:
                 # ADAM here...
-                pass
 
-        ## after all
-        for b_i in range(len(gradient)):
-            for l_i in range(len(gradient[b_i])):
-                for g_i in range(len(gradient[b_i][l_i])):
-                    gradient[b_i][l_i][g_i] = 0
+                # End of ADAM
+                pass
+            mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
+
+        # test_error = 0
+        # if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
+        #     for test_i in test_set_index_list:
+        #         predata_i = np.copy(inputS[test_i])
+        #         data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
+        #         forward_propagation(data_fp)
+        #         predata_o = np.copy(outputS[test_i])
+        #         test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
+        #     error_function_[1][int(hps[2]/p_p)] = test_error / len(test_set_index_list)
 
         hps[2] += 1
         hps[0] += 1
@@ -313,7 +323,8 @@ def Quadratic_loss(data : tuple):
     
 # additional functions
 def plot_t():
-    plt.plot(error_function)
+    plt.plot(error_function[0])
+    plt.plot(error_function[1])
     plt.ylabel('Cost')
     plt.xlabel('Times')
     plt.show()

@@ -1,43 +1,55 @@
 import numpy as np
 import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
+import time
 
 if __name__ == '__main__':
+
     nn.setup(
         _optimizer=Optimizer.Gradient_descent,
         _loss=Loss.Categorical_cross_entropy
     )
-    
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=2, output_len=5)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=5, output_len=2)
 
-    inputs, outputs = [], []
-    len_ = 10000
-    for i in range(len_):
-        inputs.append(np.array([i/len_, 1], dtype='f8'))
-        if i < 7 * len_/10:
-            outputs.append(np.array([1, 0], dtype='f8'))
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=2, output_len=7)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=7, output_len=4)
+
+    _len = 10000
+    inputs, outputs = [np.array([], dtype='float64') for _ in range(_len)], [np.array([], dtype='float64') for _ in
+                                                                             range(_len)]
+
+    for i in range(_len):
+        inputs[i] = np.array([i / _len, 1])
+        if _len / 10 < i < 3 * _len / 10:
+            outputs[i] = np.array([1, 0, 0, 0])
+        elif 4 * _len / 10 < i < 6 * _len / 10:
+            outputs[i] = np.array([0, 1, 0, 0])
+        elif 7 * _len / 10 < i < 9 * _len / 10:
+            outputs[i] = np.array([0, 0, 1, 0])
         else:
-            outputs.append(np.array([0, 1], dtype='f8'))
+            outputs[i] = np.array([0, 0, 0, 1])
+    inputs, outputs = np.array(inputs), np.array(outputs, dtype='float64')
 
-    inputs, outputs = np.array(inputs), np.array(outputs)
+    print("Start training.")
+    t = time.time()
+    nn.train(inputs, outputs, 0.003, 1000, 32)
+    print("End of training.")
+    print("Duration: {}\n".format(time.time() - t))
 
-    nn.print_len = 1
-
-    nn.train(inputs, outputs, 0.003, 300, 32)
     nn.plot_t()
 
-    # exit(0)
+    res_f, c = [[], [], [], []], len(outputs[0])
+    r = 10000
+    for i in range(r):
+        data = nn.forward(np.array([i / r, 1]))
+        for j in range(c):
+            res_f[j].append(data[j])
 
-    f = [[], []]
+        if i % (r / 10) == 0:
+            print("Core : {}, nn : {}".format(i / r, nn.argmax(data)))
 
-    for i in range(len_):
-        data = nn.forward(np.array([i/len_, 1], dtype='f8'))
-        for fi in range(len(f)):
-            f[fi].append(data[fi])
-
-    for fi in range(len(f)):
-        nn.plt.plot(f[fi])
+    for j in range(c):
+        nn.plt.plot(res_f[j], label='co{}'.format(j))
+    nn.plt.legend()
     nn.plt.show()
-    # նախորդ խնդրի պատճառը օպտիմիզացիայի ընտրությունն էր, այսինքն պետք է օգտագործել ADAM
-    # լուծել վերևի խնդիրը
+
+    # 2 ներքին շարքի դեպքում չի աշխատում.....

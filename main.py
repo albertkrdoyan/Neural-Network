@@ -2,17 +2,19 @@ import numpy as np
 import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
 
+@nn.njit(parallel=True)
+def mxx(arr : np.ndarray):
+    for i in nn.prange(arr.shape[0]):
+        arr[i] = i*999
+
 if __name__ == '__main__':
     nn.setup(
         _optimizer=Optimizer.ADAM,
         _loss=Loss.Categorical_cross_entropy
     )
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=784, output_len=128)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=128, output_len=32)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=16, output_len=16)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=32, output_len=128)
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=128, output_len=10)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=784, output_len=256)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=256, output_len=10)
 
     inputS = np.load("Digits\\l_img.npy")
     l_info = np.load("Digits\\l_info.npy")

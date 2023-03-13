@@ -3,7 +3,7 @@ import time, math
 import numpy as np
 import matrix as mx
 from enum import Enum
-from numba import njit
+from numba import njit, prange
 import matplotlib.pyplot as plt
 
 class NetType(Enum):
@@ -95,7 +95,6 @@ def forward_propagation_for_perceptron(data : tuple):
 @njit(debug=True)
 def back_propagation(data : tuple):
     output_, netInfo_, inputs_, outputs_, weights_, gradients_, loss_ = data
-
     last_neuron_layer = outputs_[-1]
 
     if loss_ == Loss.Categorical_cross_entropy:
@@ -155,7 +154,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     if batch_len > data_set_len or batch_len == 0:
         batch_len = data_set_len
 
-    percent = 0.5 * 100 / batch_len
+    percent = 0. * 100 / batch_len
 
     train_set_len = data_set_len - int(data_set_len * percent / 100)
     test_set_len = data_set_len - train_set_len
@@ -204,13 +203,17 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     if print_len == 0 or print_len > iterations_count:
         it_set = [[0, iterations_count]]
     else:
-        it_1_count = iterations_count // print_len
+        it_1_count = iterations_count // (print_len - 1)
         it_set = [[i*it_1_count, (i + 1)*it_1_count] for i in range(print_len)]
         if iterations_count % print_len != 0:
             it_set[print_len - 1][1] = iterations_count
 
     hps = np.array([btchs, lvls, t])
     parts = np.array(parts)
+
+    it_set[0][0] = 1
+    it_set = np.append([0, 1], it_set)
+    it_set.shape = (int(len(it_set) / 2), 2)
 
     np.random.shuffle(train_set_index_list)
 
@@ -237,14 +240,11 @@ def train_jit(data : tuple):
     train_err, err_counter = 0, 0
     for ip in range(it_part[0], it_part[1]):
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
-            # almost everything else inside
-            predata_i = np.copy(inputS[train_set_index_list[p]])
-            predata_o = np.copy(outputS[train_set_index_list[p]])
-            data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
+            data_fp = (np.copy(inputS[train_set_index_list[p]]), netInfo_, inputs_, outputs_, weights_, False)
             forward_propagation(data_fp)
-            train_err += Loss_Calculator((predata_o, outputs_[-1], loss_))
+            train_err += Loss_Calculator((np.copy(outputS[train_set_index_list[p]]), outputs_[-1], loss_))
             err_counter += 1
-            data_bp = (predata_o, netInfo_, inputs_, outputs_, weights_, gradient, loss_)
+            data_bp = (np.copy(outputS[train_set_index_list[p]]), netInfo_, inputs_, outputs_, weights_, gradient, loss_)
             back_propagation(data_bp)
 
         if hps[2] % p_p == 0:
@@ -257,27 +257,13 @@ def train_jit(data : tuple):
                  mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
                  mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
             elif optimizer_ == Optimizer.ADAM:
-                # ADAM here...
                 ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, alp))
-                # End of ADAM
             mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
 
-        test_error = 0
-        if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
-            for test_i in test_set_index_list:
-                predata_i = np.copy(inputS[test_i])
-                data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
-                forward_propagation(data_fp)
-                predata_o = np.copy(outputS[test_i])
-                test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
-            error_function_[1][int(hps[2]/p_p)] = test_error / len(test_set_index_list)
-
-        hps[2] += 1
-        hps[0] += 1
+        hps[2], hps[0] = hps[2] + 1, hps[0] + 1
         if hps[2] % parts_count == 0:
             np.random.shuffle(train_set_index_list)
-            hps[0] = 0
-            hps[1] += 1
+            hps[0], hps[1] = 0, hps[1] + 1
 
 def a_loop(input_ : np.ndarray, output_ : np.ndarray):
     data_fp = (input_, netInfo, inputs, outputs, weights, False)

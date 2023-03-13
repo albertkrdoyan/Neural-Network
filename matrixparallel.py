@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit
+from numba import njit, prange
 @njit
 def SoftMax(output : np.ndarray):
     if abs(np.max(output)) < 350 and abs(np.min(output)) < 350:
@@ -44,15 +44,17 @@ def print_matrix(matrix, pref : str = ''):
             print(', ')
         else:
             print(']')
+@njit(parallel=True)
 def neuralMultiplicationMega(result, vect, mx: np.ndarray):
-    for i in range(len(result)):
+    #for i in range(len(result)):
+    for i in prange(result.shape[0]):
         result[i] = 0
         for j in range(len(vect)):
             result[i] += vect[j] * mx[j][i]
         result[i] += mx[len(mx) - 1][i]
-@njit(debug=True)
+@njit(parallel=True)
 def action_by_number_jit(result: np.ndarray, mx: np.ndarray, number: float, action):
-    for row in range(len(mx)):
+    for row in prange(mx.shape[0]):
         for col in range(len(mx[0])):
             if action == "mul":
                 result[row][col] = mx[row][col] * number
@@ -62,9 +64,9 @@ def action_by_number_jit(result: np.ndarray, mx: np.ndarray, number: float, acti
                 result[row][col] = mx[row][col] - number
             elif action == "div":
                 result[row][col] = mx[row][col] / number
-@njit
+@njit(parallel=True)
 def action_matrices_jit(result: np.ndarray, mx1: np.ndarray, mx2: np.ndarray, action):
-    for row in range(len(mx1)):
+    for row in prange(mx1.shape[0]):
         for col in range(len(mx1[0])):
             if action == "add":
                 result[row][col] = mx1[row][col] + mx2[row][col]
@@ -74,8 +76,8 @@ def action_matrices_jit(result: np.ndarray, mx1: np.ndarray, mx2: np.ndarray, ac
                 result[row][col] = mx1[row][col] * mx2[row][col]
             elif action == "div":
                 result[row][col] = mx1[row][col] / mx2[row][col]
-@njit
+@njit#(parallel=True)
 def exp_matrices_jit(result: np.ndarray, mx1: np.ndarray, exponent: float):
-    for row in range(len(mx1)):
+    for row in range(mx1.shape[0]):
         for col in range(len(mx1[0])):
             result[row][col] = mx1[row][col] ** exponent

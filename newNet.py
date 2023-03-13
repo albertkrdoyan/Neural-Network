@@ -1,9 +1,9 @@
 import time, math
 
 import numpy as np
-import matrix as mx
+import matrixparallel as mx
 from enum import Enum
-from numba import njit, prange
+from numba import njit
 import matplotlib.pyplot as plt
 
 class NetType(Enum):
@@ -87,7 +87,7 @@ def forward_propagation_for_perceptron(data : tuple):
         for i in range(len(outputs_)):
             outputs_[i] = 1/(1 + np.exp(-outputs_[i]))
     elif activation == Activation.SoftMax:
-        outputs_ = mx.SoftMax(outputs_)
+        mx.SoftMax(outputs_)
     elif activation == Activation.TanH:
         for i in range(len(outputs_)):
             outputs_[i] = np.tanh(-outputs_[i])
@@ -199,12 +199,12 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     else:
         error_function = np.zeros((2, int(iterations_count / p_p)), dtype='float64')
 
-    it_set : list
+    it_set : np.ndarray
     if print_len == 0 or print_len > iterations_count:
-        it_set = [[0, iterations_count]]
+        it_set = np.array([[0, iterations_count]])
     else:
-        it_1_count = iterations_count // (print_len - 1)
-        it_set = [[i*it_1_count, (i + 1)*it_1_count] for i in range(print_len)]
+        it_1_count = iterations_count // print_len
+        it_set = np.array([[i*it_1_count, (i + 1)*it_1_count] for i in range(print_len)])
         if iterations_count % print_len != 0:
             it_set[print_len - 1][1] = iterations_count
 
@@ -212,7 +212,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     parts = np.array(parts)
 
     it_set[0][0] = 1
-    it_set = np.append([0, 1], it_set)
+    it_set = np.append(np.array([0, 1]), it_set)
     it_set.shape = (int(len(it_set) / 2), 2)
 
     np.random.shuffle(train_set_index_list)
@@ -259,6 +259,16 @@ def train_jit(data : tuple):
             elif optimizer_ == Optimizer.ADAM:
                 ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, alp))
             mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
+
+        # test_error = 0
+        # if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
+        #     for test_i in test_set_index_list:
+        #         predata_i = np.copy(inputS[test_i])
+        #         data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
+        #         forward_propagation(data_fp)
+        #         predata_o = np.copy(outputS[test_i])
+        #         test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
+        #     error_function_[1][int(hps[2] / p_p)] = test_error / len(test_set_index_list)
 
         hps[2], hps[0] = hps[2] + 1, hps[0] + 1
         if hps[2] % parts_count == 0:

@@ -2,11 +2,6 @@ import numpy as np
 import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
 
-@nn.njit(parallel=True)
-def mxx(arr : np.ndarray):
-    for i in nn.prange(arr.shape[0]):
-        arr[i] = i*999
-
 if __name__ == '__main__':
     nn.setup(
         _optimizer=Optimizer.ADAM,

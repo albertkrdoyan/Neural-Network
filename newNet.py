@@ -22,7 +22,7 @@ class Loss(Enum):
 
 class Optimizer(Enum):
     Gradient_descent = "Gradient Descent"
-    Adam = "Adam"
+    ADAM = "ADAM"
 
 # net setup section
 weights = []
@@ -155,7 +155,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     if batch_len > data_set_len or batch_len == 0:
         batch_len = data_set_len
 
-    percent = 0 * 100 / batch_len
+    percent = 0.2 * 100 / batch_len
 
     train_set_len = data_set_len - int(data_set_len * percent / 100)
     test_set_len = data_set_len - train_set_len
@@ -214,6 +214,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
     np.random.shuffle(train_set_index_list)
 
+    i = 0
     for it_part in it_set:
         ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
@@ -224,7 +225,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         train_jit(whole_data)
         btchs, lvls, t = hps[0], hps[1], hps[2]
         tme2 = time.time() - tme
-        print("Iteration Number: {}/{}, Time: {}s.".format(t, iterations_count, round(tme2, 2)))
+        i += 1
+        print("Pr: {}/{} - Iteration Number: {}/{}, Time: {}s.".format(i, len(it_set), t, iterations_count, round(tme2, 2)))
 
 @njit
 def train_jit(data : tuple):
@@ -254,22 +256,22 @@ def train_jit(data : tuple):
             if optimizer_ == Optimizer.Gradient_descent:
                  mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
                  mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
-            elif optimizer_ == Optimizer.Adam:
+            elif optimizer_ == Optimizer.ADAM:
                 # ADAM here...
-
+                ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, alp))
                 # End of ADAM
                 pass
             mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
 
-        # test_error = 0
-        # if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
-        #     for test_i in test_set_index_list:
-        #         predata_i = np.copy(inputS[test_i])
-        #         data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
-        #         forward_propagation(data_fp)
-        #         predata_o = np.copy(outputS[test_i])
-        #         test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
-        #     error_function_[1][int(hps[2]/p_p)] = test_error / len(test_set_index_list)
+        test_error = 0
+        if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
+            for test_i in test_set_index_list:
+                predata_i = np.copy(inputS[test_i])
+                data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
+                forward_propagation(data_fp)
+                predata_o = np.copy(outputS[test_i])
+                test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
+            error_function_[1][int(hps[2]/p_p)] = test_error / len(test_set_index_list)
 
         hps[2] += 1
         hps[0] += 1
@@ -293,6 +295,32 @@ def a_loop(input_ : np.ndarray, output_ : np.ndarray):
         mx.print_matrix(block, '\t')
 
     print()
+
+@njit
+def ADAM(data : tuple):
+    i, weights_, momentum1, momentum2, gradient, b1, b2, t, eps, alp = data
+
+    a1, a2, a = np.zeros(weights_[i].shape, dtype='float64'), \
+                np.zeros(weights_[i].shape, dtype='float64'), \
+                np.zeros(weights_[i].shape, dtype='float64')
+
+    mx.action_by_number_jit(a1, momentum1[i], b1, "mul")
+    mx.action_by_number_jit(a2, gradient[i], 1 - b1, "mul")
+    mx.action_matrices_jit(momentum1[i], a1, a2, "add")
+
+    mx.action_by_number_jit(a1, momentum2[i], b2, "mul")
+    mx.exp_matrices_jit(a, gradient[i], 2.0)
+    mx.action_by_number_jit(a2, a, 1 - b2, "mul")
+    mx.action_matrices_jit(momentum2[i], a1, a2, "add")
+
+    mx.action_by_number_jit(a1, momentum1[i], (1 - b1 ** t), "div")
+    mx.action_by_number_jit(a2, momentum2[i], (1 - b2 ** t), "div")
+
+    mx.action_by_number_jit(a1, a1, alp, "mul")
+    mx.exp_matrices_jit(a2, a2, 0.5)
+    mx.action_by_number_jit(a2, a2, eps, "add")
+    mx.action_matrices_jit(a, a1, a2, "div")
+    mx.action_matrices_jit(weights_[i], weights_[i], a, "sub")
 
 @njit
 def Loss_Calculator(data : tuple):

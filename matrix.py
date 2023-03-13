@@ -44,6 +44,7 @@ def print_matrix(matrix, pref : str = ''):
             print(', ')
         else:
             print(']')
+@njit
 def neuralMultiplicationMega(result, vect, mx: np.ndarray):
     for i in range(len(result)):
         result[i] = 0

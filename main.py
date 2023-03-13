@@ -8,8 +8,15 @@ if __name__ == '__main__':
         _loss=Loss.Categorical_cross_entropy
     )
 
-    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU, input_len=784, output_len=256)
+    nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU,    input_len=784, output_len=256)
+    nn.add_layer(net_type=NetType.DropOut,    activation=Activation.NonE,    input_len=256, output_len=0.8)
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=256, output_len=10)
+
+    nn.a_loop(np.zeros((784, ), dtype='f8'), np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype='f8'))
+
+    exit(0)
+
+    # դեբագով դզել... բեքի մեջ խնդիր կա դրոպաուտով
 
     inputS = np.load("Digits\\l_img.npy")
     l_info = np.load("Digits\\l_info.npy")

@@ -1,13 +1,14 @@
 import time, math
 
 import numpy as np
-import matrixparallel as mx
+import matrix as mx
 from enum import Enum
 from numba import njit
 import matplotlib.pyplot as plt
 
 class NetType(Enum):
     Perceptron = "Perceptron"
+    DropOut = "DropOut"
 
 class Activation(Enum):
     ReLU = "ReLU"
@@ -15,6 +16,7 @@ class Activation(Enum):
     SoftMax = "SoftMax"
     Linear = "Linear"
     TanH = "TanH"
+    NonE = "None"
 
 class Loss(Enum):
     Categorical_cross_entropy = "Categorical Cross Entropy"
@@ -33,6 +35,8 @@ loss : Loss
 optimizer : Optimizer
 netInfo = []
 perceptron_counter = 0
+dropout_counter = 0
+dropout_weights = []
 
 error_function = []
 print_len = 0
@@ -42,17 +46,20 @@ def setup(_optimizer : Optimizer, _loss : Loss):
     loss, optimizer = _loss, _optimizer
     inputs, outputs = [], []
 
-def add_layer(net_type : NetType, activation : Activation, input_len : int, output_len : int):
+def add_layer(net_type : NetType, activation : Activation, input_len : int, output_len : float):
     global inputs, outputs, perceptron_counter
     if net_type == NetType.Perceptron:
-        netInfo.append((net_type, activation, input_len, output_len, perceptron_counter))
+        netInfo.append((net_type, activation, input_len, int(output_len), perceptron_counter))
         inputs.append(np.zeros((input_len,), dtype='float64'))
-        outputs.append(np.zeros((output_len,), dtype='float64'))
-        weights.append(np.random.random((input_len + 1, output_len)))
+        outputs.append(np.zeros((int(output_len),), dtype='float64'))
+        weights.append(np.random.random((input_len + 1, int(output_len))))
         perceptron_counter += 1
     else:
-        #Dropout, ect...
-        pass
+        netInfo.append((net_type, activation, input_len, output_len, dropout_counter))
+        arr = np.full((int(input_len * int(output_len)), ), 0, dtype='f8')
+        arr = np.append(arr, np.full((input_len - int(input_len * output_len), ), 1, dtype='f8'))
+        np.random.shuffle(arr)
+        dropout_weights.append(np.copy(arr))
 
 # neural section
 def forward(input_: np.ndarray) -> np.ndarray:
@@ -60,21 +67,21 @@ def forward(input_: np.ndarray) -> np.ndarray:
     forward_propagation(data_fp)
     return outputs[-1]
 
-@njit(debug=True)
+#@njit(debug=True)
 def forward_propagation(data: tuple):
     input_, netInfo_, inputs_, outputs_, weights_, normal = data
 
     for index, info in enumerate(netInfo_):
         if info[0] == NetType.Perceptron:
-            jit_equal1d(inputs_[index], input_)
-            data_pfp = (info[1], outputs_[index], inputs_[index], weights_[index])
+            jit_equal1d(inputs_[info[4]], input_)
+            data_pfp = (info[1], outputs_[info[4]], inputs_[info[4]], weights_[info[4]])
             forward_propagation_for_perceptron(data_pfp)
-            input_ = outputs_[index]
+            input_ = outputs_[info[4]]
         elif normal is False:
-            #Dropout, CNN ect.
+            
             pass
 
-@njit
+#@njit
 def forward_propagation_for_perceptron(data : tuple):
     activation, outputs_, inputs_, weights_ = data
     mx.neuralMultiplicationMega(outputs_, inputs_, weights_)
@@ -92,7 +99,7 @@ def forward_propagation_for_perceptron(data : tuple):
         for i in range(len(outputs_)):
             outputs_[i] = np.tanh(-outputs_[i])
 
-@njit(debug=True)
+@njit
 def back_propagation(data : tuple):
     output_, netInfo_, inputs_, outputs_, weights_, gradients_, loss_ = data
     last_neuron_layer = outputs_[-1]
@@ -276,18 +283,17 @@ def train_jit(data : tuple):
             hps[0], hps[1] = 0, hps[1] + 1
 
 def a_loop(input_ : np.ndarray, output_ : np.ndarray):
-    data_fp = (input_, netInfo, inputs, outputs, weights, False)
-    forward_propagation(data_fp)
-
     gradients = []
     for block in weights:
         gradients.append(np.zeros(block.shape, dtype='float64'))
+    data_fp = (input_, netInfo, inputs, outputs, gradients, False)
+    #forward_propagation(data_fp)
     data_bp = (output_, netInfo, inputs, outputs, weights, gradients, loss)
     back_propagation(data_bp)
 
     for i, block in enumerate(gradients):
         print("Gradient [{}]:".format(i))
-        mx.print_matrix(block, '\t')
+        # mx.print_matrix(block, '\t')
 
     print()
 

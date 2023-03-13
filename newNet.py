@@ -155,7 +155,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     if batch_len > data_set_len or batch_len == 0:
         batch_len = data_set_len
 
-    percent = 0.2 * 100 / batch_len
+    percent = 0.5 * 100 / batch_len
 
     train_set_len = data_set_len - int(data_set_len * percent / 100)
     test_set_len = data_set_len - train_set_len
@@ -260,7 +260,6 @@ def train_jit(data : tuple):
                 # ADAM here...
                 ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, alp))
                 # End of ADAM
-                pass
             mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
 
         test_error = 0

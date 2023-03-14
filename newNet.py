@@ -1,7 +1,7 @@
 import time, math
 
 import numpy as np
-import matrixparallel as mx
+import matrix as mx
 from enum import Enum
 from numba import njit
 import matplotlib.pyplot as plt
@@ -240,7 +240,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         btchs, lvls, t = hps[0], hps[1], hps[2]
         tme2 = time.time() - tme
         i += 1
-        print("Pr: {}/{} - Iteration Number: {}/{}, Time: {}s.".format(i, len(it_set), t, iterations_count, round(tme2, 2)))
+        print("Pr: {}/{} - Iteration Number: {}/{}, Progress Time: {}s, ETA: {}".format(i, len(it_set), t, iterations_count, round(tme2, 2),\
+                                                                                                        round(tme2*(print_len + 1 - i), 2)))
 
 @njit
 def train_jit(data : tuple):
@@ -350,9 +351,7 @@ def Cross_Entropy(data : tuple):
     output, last_layer_output = data
     E = 0
     for a_i, a_value in enumerate(last_layer_output):
-        if a_value < 0.0000000001:
-            E += output[a_i] * (-25)
-        else:
+        if output[a_i] != 0:
             E += output[a_i] * np.log(a_value)
     return -E
 

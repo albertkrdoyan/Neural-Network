@@ -25,7 +25,7 @@ if __name__ == '__main__':
     outputS = np.array(outputS, dtype='float64')
 
     nn.print_len = 20
-    nn.train(inputS, outputS, 0.03, 5, 32)
+    nn.train(inputS, outputS, 0.02, 2, 32)
     nn.plot_t()
 
     t_img = np.load("Digits\\t_img.npy")

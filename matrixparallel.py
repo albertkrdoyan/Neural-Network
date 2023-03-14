@@ -20,11 +20,13 @@ def SoftMax(output : np.ndarray):
         if b[_i] == 1:
             sum_z += np.exp(v)
 
+    eps = 1e-15*(1 - np.sum(b))/np.sum(b)
+
     for _i, v in enumerate(output):
         if b[_i] == 1:
-            output[_i] = (np.exp(v) / sum_z)
+            output[_i] = (np.exp(v) / sum_z) - eps
         else:
-            output[_i] = 0
+            output[_i] = 1e-15
     return output
 def print_matrix(matrix, pref : str = ''):
     for i, row in enumerate(matrix):

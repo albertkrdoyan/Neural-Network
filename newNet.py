@@ -218,6 +218,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
 
     hps = np.array([btchs, lvls, t])
     parts = np.array(parts)
+    alp = np.array([alp])
 
     it_set[0][0] = 1
     it_set = np.append(np.array([0, 1]), it_set)
@@ -241,14 +242,19 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         i += 1
         print("Pr: {}/{} - Iteration Number: {}/{}, Time: {}s.".format(i, len(it_set), t, iterations_count, round(tme2, 2)))
 
-#@njit
+@njit
 def train_jit(data : tuple):
     weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, batch_len, b1, b2, eps, alp, \
     ts, it_part, gradient, momentum1, momentum2, parts, error_function_, p_p, dropout_weights_ = data
     inputS, outputS, train_set_index_list, test_set_index_list = ts
-    
+
+    #sp = alp[0]
     train_err, err_counter = 0, 0
     for ip in range(it_part[0], it_part[1]):
+        if hps[1] > 1:
+            sp = alp[0]/ (0.001 * hps[2])
+        else:
+            sp = alp[0]
         for i in range(len(dropout_weights_)):
             np.random.shuffle(dropout_weights_[i])
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
@@ -268,10 +274,10 @@ def train_jit(data : tuple):
         for i in range(len(gradient)):
             mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
             if optimizer_ == Optimizer.Gradient_descent:
-                 mx.action_by_number_jit(gradient[i], gradient[i], alp, "mul")
+                 mx.action_by_number_jit(gradient[i], gradient[i], sp, "mul")
                  mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
             elif optimizer_ == Optimizer.ADAM:
-                ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, alp))
+                ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, sp))
             mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
 
         # test_error = 0

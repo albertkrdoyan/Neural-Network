@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
     t_img = np.load("Digits\\t_img.npy")
     t_info = np.load("Digits\\t_info.npy")
+
     t_img = t_img / 255
     t_img.shape = (len(t_img), 28 * 28)
 

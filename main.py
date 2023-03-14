@@ -12,12 +12,6 @@ if __name__ == '__main__':
     nn.add_layer(net_type=NetType.DropOut,    activation=Activation.NonE,    input_len=256, output_len=0.8)
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=256, output_len=10)
 
-    nn.a_loop(np.zeros((784, ), dtype='f8'), np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype='f8'))
-
-    exit(0)
-
-    # դեբագով դզել... բեքի մեջ խնդիր կա դրոպաուտով
-
     inputS = np.load("Digits\\l_img.npy")
     l_info = np.load("Digits\\l_info.npy")
     inputS = inputS / 255
@@ -31,7 +25,7 @@ if __name__ == '__main__':
     outputS = np.array(outputS, dtype='float64')
 
     nn.print_len = 30
-    nn.train(inputS, outputS, 0.01, 5, 32)
+    nn.train(inputS, outputS, 0.01, 2, 32)
     nn.plot_t()
 
     t_img = np.load("Digits\\t_img.npy")

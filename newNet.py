@@ -1,7 +1,7 @@
 import time, math
 
 import numpy as np
-import matrix as mx
+import matrixparallel as mx
 from enum import Enum
 from numba import njit
 import matplotlib.pyplot as plt
@@ -240,8 +240,8 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         btchs, lvls, t = hps[0], hps[1], hps[2]
         tme2 = time.time() - tme
         i += 1
-        print("Pr: {}/{} - Iteration Number: {}/{}, Progress Time: {}s, ETA: {}".format(i, len(it_set), t, iterations_count, round(tme2, 2),\
-                                                                                                        round(tme2*(print_len + 1 - i), 2)))
+        print("Pr: {}/{} - Iteration Number: {}/{}, Progress Time: {}s, ETA: {}".format(i, len(it_set), t,
+                                                iterations_count, round(tme2, 2), convert_seconds(tme2*(print_len + 1 - i))))
 
 @njit
 def train_jit(data : tuple):
@@ -364,6 +364,12 @@ def Quadratic_loss(data : tuple):
     return E
     
 # additional functions
+def convert_seconds(seconds):
+    seconds = int(seconds)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    remaining_seconds = seconds % 60
+    return "{:02d}:{:02d}:{:02d}".format(hours, minutes, remaining_seconds)
 def plot_t():
     plt.plot(error_function[0])
     plt.plot(error_function[1])

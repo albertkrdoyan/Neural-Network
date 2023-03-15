@@ -3,13 +3,14 @@ import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
 
 if __name__ == '__main__':
+
     nn.setup(
         _optimizer=Optimizer.ADAM,
         _loss=Loss.Categorical_cross_entropy
     )
 
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU,    input_len=784, output_len=256)
-    nn.add_layer(net_type=NetType.DropOut,    activation=Activation.NonE,    input_len=256, output_len=0.5)
+    #nn.add_layer(net_type=NetType.DropOut,    activation=Activation.NonE,    input_len=256, output_len=0.5)
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=256, output_len=10)
 
     inputS = np.load("Digits\\l_img.npy")
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     outputS = np.array(outputS, dtype='float64')
 
     nn.print_len = 20
-    nn.train(inputS, outputS, 0.02, 2, 32)
+    nn.train(inputS, outputS, 0.03, 5, 32)
     nn.plot_t()
 
     t_img = np.load("Digits\\t_img.npy")

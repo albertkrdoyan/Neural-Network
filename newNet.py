@@ -67,7 +67,7 @@ def forward(input_: np.ndarray) -> np.ndarray:
     forward_propagation(data_fp)
     return outputs[-1]
 
-@njit(debug=True)
+@njit
 def forward_propagation(data: tuple):
     input_, netInfo_, inputs_, outputs_, weights_, normal, dropout_weights_ = data
 
@@ -162,9 +162,9 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     if batch_len > data_set_len or batch_len == 0:
         batch_len = data_set_len
 
-    percent = 0. * 100 / batch_len
+    percent = int(0. * data_set_len) #* 100 / batch_len
 
-    train_set_len = data_set_len - int(data_set_len * percent / 100)
+    train_set_len = data_set_len - percent
     test_set_len = data_set_len - train_set_len
     if percent != 0:
         test_set_len += train_set_len % batch_len
@@ -269,7 +269,7 @@ def train_jit(data : tuple):
             back_propagation(data_bp)
 
         if hps[2] % p_p == 0:
-            error_function_[0][int(hps[2]/p_p)] = train_err / err_counter
+            error_function_[0][int(hps[2]/p_p)] = 10 * train_err / err_counter
             train_err, err_counter = 0, 0
 
         for i in range(len(gradient)):
@@ -281,15 +281,15 @@ def train_jit(data : tuple):
                 ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, sp))
             mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
 
-        # test_error = 0
-        # if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
-        #     for test_i in test_set_index_list:
-        #         predata_i = np.copy(inputS[test_i])
-        #         data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False)
-        #         forward_propagation(data_fp)
-        #         predata_o = np.copy(outputS[test_i])
-        #         test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
-        #     error_function_[1][int(hps[2] / p_p)] = test_error / len(test_set_index_list)
+        test_error = 0
+        if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
+            for test_i in test_set_index_list:
+                predata_i = np.copy(inputS[test_i])
+                data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False, dropout_weights_)
+                forward_propagation(data_fp)
+                predata_o = np.copy(outputS[test_i])
+                test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
+            error_function_[1][int(hps[2] / p_p)] = 10 * test_error / len(test_set_index_list)
 
         hps[2], hps[0] = hps[2] + 1, hps[0] + 1
         if hps[2] % parts_count == 0:

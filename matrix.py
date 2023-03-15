@@ -28,6 +28,16 @@ def SoftMax(output : np.ndarray):
         else:
             output[_i] = 1e-15
     return output
+
+def print_matrix_as_image(mx : np.ndarray):
+    for line in mx:
+        for cell in line:
+            if cell != 0:
+                print("▓", end='')
+            else:
+                print(" ", end='')
+        print()
+
 def print_matrix(matrix, pref : str = ''):
     for i, row in enumerate(matrix):
         if i == 0:

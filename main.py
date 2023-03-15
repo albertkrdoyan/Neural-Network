@@ -2,7 +2,12 @@ import numpy as np
 import newNet as nn
 from newNet import Activation, NetType, Loss, Optimizer
 
+from keras.datasets import fashion_mnist
+
 if __name__ == '__main__':
+    print('Begin....')
+
+    (inputS, l_info), (t_img, t_info) = fashion_mnist.load_data()
 
     nn.setup(
         _optimizer=Optimizer.ADAM,
@@ -10,11 +15,19 @@ if __name__ == '__main__':
     )
 
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.ReLU,    input_len=784, output_len=256)
-    #nn.add_layer(net_type=NetType.DropOut,    activation=Activation.NonE,    input_len=256, output_len=0.5)
+    nn.add_layer(net_type=NetType.DropOut,    activation=Activation.NonE,    input_len=256, output_len=0.8)
     nn.add_layer(net_type=NetType.Perceptron, activation=Activation.SoftMax, input_len=256, output_len=10)
 
-    inputS = np.load("Digits\\l_img.npy")
-    l_info = np.load("Digits\\l_info.npy")
+    # inputS = np.load("Digits\\l_img.npy")
+    # l_info = np.load("Digits\\l_info.npy")
+
+    ###
+    numm = np.random.randint(0, len(inputS))
+    nn.mx.print_matrix_as_image(inputS[numm])
+    print(l_info[numm])
+    input("Enter to continue...")
+    ###
+
     inputS = inputS / 255
     inputS.shape = (len(inputS), 784,)
 
@@ -26,11 +39,11 @@ if __name__ == '__main__':
     outputS = np.array(outputS, dtype='float64')
 
     nn.print_len = 20
-    nn.train(inputS, outputS, 0.03, 5, 32)
+    nn.train(inputS, outputS, 0.025, 5, 32)
     nn.plot_t()
 
-    t_img = np.load("Digits\\t_img.npy")
-    t_info = np.load("Digits\\t_info.npy")
+    # t_img = np.load("Digits\\t_img.npy")
+    # t_info = np.load("Digits\\t_info.npy")
 
     t_img = t_img / 255
     t_img.shape = (len(t_img), 28 * 28)
@@ -59,3 +72,6 @@ if __name__ == '__main__':
         nn.plt.imshow(bad_answers[i], cmap=nn.plt.cm.binary)
 
     nn.plt.show()
+
+    input()
+    nn.save()

@@ -73,90 +73,37 @@ def forward_propagation(data: tuple):
 
     for index, info in enumerate(netInfo_):
         if info[0] == NetType.Perceptron:
-            jit_equal1d(inputs_[info[4]], input_)
+            mx.jit_equal1d(inputs_[info[4]], input_)
             data_pfp = (info[1], outputs_[info[4]], inputs_[info[4]], weights_[info[4]])
-            forward_propagation_for_perceptron(data_pfp)
+            mx.forward_propagation_for_perceptron(data_pfp)
             input_ = outputs_[info[4]]
         elif normal is False and info[0] == NetType.DropOut:
-            for i in range(len(input_)):
+            for i in range(len(dropout_weights_)):
                 input_[i] *= dropout_weights_[info[4]][i]
-
-@njit
-def forward_propagation_for_perceptron(data : tuple):
-    activation, outputs_, inputs_, weights_ = data
-    mx.neuralMultiplicationMega(outputs_, inputs_, weights_)
-
-    if activation == Activation.ReLU:
-        for i in range(len(outputs_)):
-            if outputs_[i] < 0:
-                outputs_[i] = 0
-    elif activation == Activation.Sigmoid:
-        for i in range(len(outputs_)):
-            outputs_[i] = 1/(1 + np.exp(-outputs_[i]))
-    elif activation == Activation.SoftMax:
-        mx.SoftMax(outputs_)
-    elif activation == Activation.TanH:
-        for i in range(len(outputs_)):
-            outputs_[i] = np.tanh(-outputs_[i])
 
 @njit
 def back_propagation(data : tuple):
     output_, netInfo_, inputs_, outputs_, weights_, gradients_, loss_, dropout_weights_ = data
     last_neuron_layer = outputs_[-1]
 
-    if loss_ == Loss.Categorical_cross_entropy:
-        if netInfo_[-1][1] == Activation.SoftMax:
-            for i in range(len(last_neuron_layer)):
-                output_[i] = last_neuron_layer[i] - output_[i]
-        else:
-            for i in range(len(last_neuron_layer)):
-                output_[i] = - output_[i] / last_neuron_layer[i]
-    elif loss_ == Loss.Quadratic_loss:
-        for i in range(len(last_neuron_layer)):
-            output_[i] = 2 * (last_neuron_layer[i] - output_[i])
+    mx.pre_back((loss_, netInfo_, output_, last_neuron_layer))
 
-    netInfo__ = []
-    for i in range(len(netInfo_) - 1, -1, -1):
-        netInfo__.append(netInfo_[i])
-
-    for info in netInfo__:
+    for info in netInfo_[::-1]:
         if info[0] is NetType.Perceptron:
             data_bpfp = (info[1], output_, outputs_[info[4]], inputs_[info[4]], weights_[info[4]], gradients_[info[4]])
-            back_propagation_for_perceptron(data_bpfp)
+            mx.back_propagation_for_perceptron(data_bpfp)
             output_ = inputs_[info[4]]
         else:
             if info[0] == NetType.DropOut:
-                for i in range(len(output_)):
+                for i in range(len(dropout_weights_)):
                     output_[i] *= dropout_weights_[info[4]][i]
 
 @njit
-def back_propagation_for_perceptron(data : tuple):
-    activation, output_, outputs_, inputs_, weights_, gradient_ = data
-
-    if activation == Activation.ReLU:
-        for i in range(len(outputs_)):
-            if outputs_[i] == 0:
-                output_[i] = 0
-    elif activation == Activation.Sigmoid:
-        for i in range(len(outputs_)):
-            output_[i] = output_[i] * outputs_[i] * (1 - outputs_[i])
-    elif activation == Activation.TanH:
-        for i in range(len(outputs_)):
-            output_[i] = output_[i] * (1 - outputs_[i]**2)
-
-    derivative = np.zeros_like(inputs_, dtype='float64')
-    for i in range(len(derivative)):
-        for j in range(len(output_)):
-            derivative[i] += output_[j] * weights_[i][j]
-
-    bias_line = len(gradient_) - 1
-    for i, val in enumerate(output_):
-        gradient_[bias_line][i] += val
-        for j, val_j in enumerate(inputs_):
-            gradient_[j][i] += (val * val_j)
-
-    jit_equal1d(inputs_, derivative)
-
+def jit_equal1d(arr1d_1 : np.ndarray, arr1d_2 : np.ndarray, new : bool = False):
+    if new is True:
+        arr1d_1 = np.zeros(arr1d_2.shape, dtype=arr1d_2.dtype)
+    for ind in range(len(arr1d_2)):
+        arr1d_1[ind] = arr1d_2[ind]
 def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, levels : int, batch_len : int):
     data_set_len = len(inputS)
     if batch_len > data_set_len or batch_len == 0:
@@ -201,7 +148,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
     btchs = 0
 
     p_p = 15
-    global error_function
+    global error_function, dropout_weights
     if iterations_count % p_p != 0:
         error_function = np.zeros((2, int(iterations_count / p_p) + 1), dtype='float64')
     else:
@@ -231,7 +178,7 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         ts = (inputS, outputS, train_set_index_list, test_set_index_list) # problem
         # print("L : {}/{}, b {}/{} ".format(lvls + 1, levels, btchs + 1, parts_count), end='')
         if len(dropout_weights) == 0:
-            dropout_weights.append(np.array([0]))
+            dropout_weights = np.array([[1]], dtype='f8')
         whole_data = (weights, inputs, outputs, loss, optimizer, netInfo, hps, parts_count, batch_len, b1, b2, eps, alp,
                       ts, it_part, gradient, momentum1, momentum2, parts, error_function, p_p, dropout_weights)
 
@@ -243,19 +190,20 @@ def train(inputS : np.ndarray, outputS : np.ndarray, learning_rate : float, leve
         print("Pr: {}/{} - Iteration Number: {}/{}, Progress Time: {}s, ETA: {}".format(i, len(it_set), t,
                                                 iterations_count, round(tme2, 2), convert_seconds(tme2*(print_len + 1 - i))))
 
+
 @njit
 def train_jit(data : tuple):
     weights_, inputs_, outputs_, loss_, optimizer_, netInfo_, hps, parts_count, batch_len, b1, b2, eps, alp, \
     ts, it_part, gradient, momentum1, momentum2, parts, error_function_, p_p, dropout_weights_ = data
     inputS, outputS, train_set_index_list, test_set_index_list = ts
 
-    #sp = alp[0]
+    sp = alp[0]
     train_err, err_counter = 0, 0
     for ip in range(it_part[0], it_part[1]):
-        if hps[1] > 1:
-            sp = alp[0]/ (0.001 * hps[2])
-        else:
-            sp = alp[0]
+        # if hps[1] > 1:
+        #     sp = alp[0]/ (0.001 * hps[2])
+        # else:
+        #     sp = alp[0]
         for i in range(len(dropout_weights_)):
             np.random.shuffle(dropout_weights_[i])
         for p in range(parts[hps[0]][0], parts[hps[0]][1] + 1):
@@ -273,52 +221,61 @@ def train_jit(data : tuple):
             train_err, err_counter = 0, 0
 
         for i in range(len(gradient)):
-            mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
             if optimizer_ == Optimizer.Gradient_descent:
+                 mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
                  mx.action_by_number_jit(gradient[i], gradient[i], sp, "mul")
                  mx.action_matrices_jit(weights_[i], weights_[i], gradient[i], "sub")
+                 mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
             elif optimizer_ == Optimizer.ADAM:
-                ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, sp))
-            mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
+                ADAM((i, weights_, momentum1, momentum2, gradient, b1, b2, hps[2] + 1, eps, sp, batch_len))
 
-        test_error = 0
-        if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
-            for test_i in test_set_index_list:
-                predata_i = np.copy(inputS[test_i])
-                data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False, dropout_weights_)
-                forward_propagation(data_fp)
-                predata_o = np.copy(outputS[test_i])
-                test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
-            error_function_[1][int(hps[2] / p_p)] = 10 * test_error / len(test_set_index_list)
+        # test_error = 0
+        # if len(test_set_index_list) != 0 and hps[2] % p_p == 0:
+        #     for test_i in test_set_index_list:
+        #         predata_i = np.copy(inputS[test_i])
+        #         data_fp = (predata_i, netInfo_, inputs_, outputs_, weights_, False, dropout_weights_)
+        #         forward_propagation(data_fp)
+        #         predata_o = np.copy(outputS[test_i])
+        #         test_error += Loss_Calculator((predata_o, outputs_[-1], loss_))
+        #     error_function_[1][int(hps[2] / p_p)] = 10 * test_error / len(test_set_index_list)
 
         hps[2], hps[0] = hps[2] + 1, hps[0] + 1
         if hps[2] % parts_count == 0:
             np.random.shuffle(train_set_index_list)
             hps[0], hps[1] = 0, hps[1] + 1
 
-def a_loop(input_ : np.ndarray, output_ : np.ndarray):
+def a_loop(input_ : np.ndarray, output_ : np.ndarray, printb : bool = False):
+    global dropout_weights
+    if len(dropout_weights) == 0:
+        dropout_weights = np.array([[1]], dtype='f8')
     data_fp = (input_, netInfo, inputs, outputs, weights, False, dropout_weights)
     forward_propagation(data_fp)
+
+    if printb is True:
+        print_neuron_info()
 
     gradients = []
     for block in weights:
         gradients.append(np.zeros(block.shape, dtype='float64'))
-    data_bp = (output_, netInfo, inputs, outputs, weights, gradients, loss)
+    data_bp = (output_, netInfo, inputs, outputs, weights, gradients, loss, dropout_weights)
     back_propagation(data_bp)
 
     for i, block in enumerate(gradients):
         print("Gradient [{}]:".format(i))
-        # mx.print_matrix(block, '\t')
+        if printb is True:
+            mx.print_matrix(block, '\t')
 
     print()
 
 @njit
 def ADAM(data : tuple):
-    i, weights_, momentum1, momentum2, gradient, b1, b2, t, eps, alp = data
+    i, weights_, momentum1, momentum2, gradient, b1, b2, t, eps, alp, batch_len = data
 
     a1, a2, a = np.zeros(weights_[i].shape, dtype='float64'), \
                 np.zeros(weights_[i].shape, dtype='float64'), \
                 np.zeros(weights_[i].shape, dtype='float64')
+
+    mx.action_by_number_jit(gradient[i], gradient[i], batch_len, "div")
 
     mx.action_by_number_jit(a1, momentum1[i], b1, "mul")
     mx.action_by_number_jit(a2, gradient[i], 1 - b1, "mul")
@@ -337,6 +294,8 @@ def ADAM(data : tuple):
     mx.action_by_number_jit(a2, a2, eps, "add")
     mx.action_matrices_jit(a, a1, a2, "div")
     mx.action_matrices_jit(weights_[i], weights_[i], a, "sub")
+
+    mx.action_by_number_jit(gradient[i], gradient[i], 0, "mul")
 
 @njit
 def Loss_Calculator(data : tuple):
@@ -362,7 +321,7 @@ def Quadratic_loss(data : tuple):
     for a_i, a_value in enumerate(last_layer_output):
         E += (output[a_i] - a_value) ** 2
     return E
-    
+
 # additional functions
 def convert_seconds(seconds):
     seconds = int(seconds)
@@ -391,11 +350,6 @@ def argmax(arr_: np.ndarray):
         if ind == max_index:
             result_[ind] = 1
             return result_
-
-@njit
-def jit_equal1d(arr1d_1 : np.ndarray, arr1d_2 : np.ndarray):
-    for ind, el in enumerate(arr1d_2):
-        arr1d_1[ind] = el
 
 @njit
 def cut_trail(f_str):

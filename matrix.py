@@ -29,6 +29,43 @@ def SoftMax(output : np.ndarray):
             output[_i] = 1e-15
     return output
 
+@njit
+def pre_back(data : tuple):
+    loss_, netInfo_, output_, last_neuron_layer = data
+
+    if loss_ == "Categorical Cross Entropy":
+        if netInfo_[-1][1] == "SoftMax":
+            for i in range(len(last_neuron_layer)):
+                output_[i] = last_neuron_layer[i] - output_[i]
+        else:
+            for i in range(len(last_neuron_layer)):
+                output_[i] = - output_[i] / last_neuron_layer[i]
+    elif loss_ == "Quadratic Loss":
+        for i in range(len(last_neuron_layer)):
+            output_[i] = 2 * (last_neuron_layer[i] - output_[i])
+
+@njit
+def jit_equal1d(arr1d_1 : np.ndarray, arr1d_2 : np.ndarray):
+    for ind in range(len(arr1d_2)):
+        arr1d_1[ind] = arr1d_2[ind]
+@njit
+def forward_propagation_for_perceptron(data : tuple):
+    activation, outputs_, inputs_, weights_ = data
+    neuralMultiplicationMega(outputs_, inputs_, weights_)
+
+    if activation == "ReLU":
+        for i in range(len(outputs_)):
+            if outputs_[i] < 0:
+                outputs_[i] = 0
+    elif activation == "Sigmoid":
+        for i in range(len(outputs_)):
+            outputs_[i] = 1/(1 + np.exp(-outputs_[i]))
+    elif activation == "SoftMax":
+        SoftMax(outputs_)
+    elif activation == "TanH":
+        for i in range(len(outputs_)):
+            outputs_[i] = np.tanh(-outputs_[i])
+
 def print_matrix_as_image(mx : np.ndarray):
     for line in mx:
         for cell in line:

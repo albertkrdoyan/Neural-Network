@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     nn.a_loop(np.array([0.5, 0.5, 0.5], dtype='f8'), np.array([0.0, 1.0, 0.0], dtype='f8'))
 
-    nn.print_neuron_info()
+    # nn.print_neuron_info()
 
 
     exit(0)

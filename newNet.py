@@ -291,8 +291,8 @@ def a_loop(input_ : np.ndarray, output_ : np.ndarray):
     data_fp = (input_, netInfo, inputs, outputs, gradients, False)
     # forward_propagation(data_fp)
 
-    print_neuron_info()
-    print_weights()
+    # print_neuron_info()
+    # print_weights()
 
     data_bp = (output_, netInfo, inputs, outputs, weights, gradients, loss)
     back_propagation(data_bp)
